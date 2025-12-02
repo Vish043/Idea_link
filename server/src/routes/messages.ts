@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import { Types } from 'mongoose';
 import { Message } from '../models/Message';
 import { Idea } from '../models/Idea';
 import { User } from '../models/User';
@@ -7,6 +8,13 @@ import { createError } from '../middleware/errorHandler';
 import { validateObjectId } from '../utils/validation';
 
 const router = express.Router();
+
+interface PopulatedUser {
+  _id: Types.ObjectId;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+}
 
 // GET /api/messages - Get messages for idea or personal chat
 router.get('/', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
@@ -52,9 +60,10 @@ router.get('/', authMiddleware, async (req: Request, res: Response, next: NextFu
         throw createError('Idea not found', 404);
       }
 
-      const isOwner = idea.owner.toString() === req.user._id.toString();
+      const userId = req.user!._id.toString();
+      const isOwner = idea.owner.toString() === userId;
       const isCollaborator = idea.collaborators.some(
-        (id) => id.toString() === req.user._id.toString()
+        (id: Types.ObjectId) => id.toString() === userId
       );
 
       if (!isOwner && !isCollaborator) {
@@ -94,23 +103,25 @@ router.get('/conversations', authMiddleware, async (req: Request, res: Response,
       .sort({ createdAt: -1 });
 
     // Get unique user IDs from personal messages
-    const personalChatUsers = new Map<string, { user: any; lastMessage: any; unreadCount: number }>();
+    const personalChatUsers = new Map<string, { user: PopulatedUser; lastMessage: { _id: string; content: string; sender: { _id: string; name: string }; createdAt: Date }; unreadCount: number }>();
     
     personalMessages.forEach((msg) => {
-      const senderId = (msg.sender as any)?._id?.toString();
-      const recipientId = (msg.recipient as any)?._id?.toString();
+      const sender = msg.sender as unknown as PopulatedUser;
+      const recipient = msg.recipient as unknown as PopulatedUser | undefined;
+      const senderId = sender?._id?.toString();
+      const recipientId = recipient?._id?.toString();
       const currentUserId = req.user!._id.toString();
       
       // Determine the other user in the conversation
       let otherUserId: string | null = null;
-      let otherUser: any = null;
+      let otherUser: PopulatedUser | null = null;
       
-      if (senderId === currentUserId && recipientId) {
+      if (senderId === currentUserId && recipientId && recipient) {
         otherUserId = recipientId;
-        otherUser = msg.recipient;
+        otherUser = recipient;
       } else if (recipientId === currentUserId && senderId) {
         otherUserId = senderId;
-        otherUser = msg.sender;
+        otherUser = sender;
       }
       
       if (otherUserId && otherUser) {
@@ -122,8 +133,8 @@ router.get('/conversations', authMiddleware, async (req: Request, res: Response,
               _id: msg._id.toString(),
               content: msg.content,
               sender: {
-                _id: senderId,
-                name: (msg.sender as any).name,
+                _id: senderId || '',
+                name: sender.name,
               },
               createdAt: msg.createdAt,
             },

@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import { Types } from 'mongoose';
 import { Task } from '../models/Task';
 import { Idea } from '../models/Idea';
 import { authMiddleware } from '../middleware/auth';
@@ -29,9 +30,10 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
     }
 
     // Check if user is owner or collaborator
-    const isOwner = idea.owner.toString() === req.user._id.toString();
+    const userId = req.user._id.toString();
+    const isOwner = idea.owner.toString() === userId;
     const isCollaborator = idea.collaborators.some(
-      (id) => id.toString() === req.user._id.toString()
+      (id: Types.ObjectId) => id.toString() === userId
     );
 
     if (!isOwner && !isCollaborator) {
@@ -44,7 +46,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
       // Check if assignee is owner or collaborator
       const assigneeIsOwner = idea.owner.toString() === assignee;
       const assigneeIsCollaborator = idea.collaborators.some(
-        (id) => id.toString() === assignee
+        (id: Types.ObjectId) => id.toString() === assignee
       );
       if (!assigneeIsOwner && !assigneeIsCollaborator) {
         throw createError('Assignee must be the owner or a collaborator', 400);
@@ -91,9 +93,10 @@ router.get('/', authMiddleware, async (req: Request, res: Response, next: NextFu
       throw createError('Idea not found', 404);
     }
 
-    const isOwner = idea.owner.toString() === req.user._id.toString();
+    const userId = req.user._id.toString();
+    const isOwner = idea.owner.toString() === userId;
     const isCollaborator = idea.collaborators.some(
-      (id) => id.toString() === req.user._id.toString()
+      (id: Types.ObjectId) => id.toString() === userId
     );
 
     if (!isOwner && !isCollaborator) {
@@ -130,9 +133,10 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response, next: N
     const idea = task.idea as any;
 
     // Check if user is owner or collaborator
-    const isOwner = idea.owner.toString() === req.user._id.toString();
+    const userId = req.user._id.toString();
+    const isOwner = idea.owner.toString() === userId;
     const isCollaborator = idea.collaborators.some(
-      (id) => id.toString() === req.user._id.toString()
+      (id: Types.ObjectId) => id.toString() === userId
     );
 
     if (!isOwner && !isCollaborator) {
@@ -149,7 +153,7 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response, next: N
       validateObjectId(assignee, 'Assignee ID');
       const assigneeIsOwner = idea.owner.toString() === assignee;
       const assigneeIsCollaborator = idea.collaborators.some(
-        (id) => id.toString() === assignee
+        (id: Types.ObjectId) => id.toString() === assignee
       );
       if (!assigneeIsOwner && !assigneeIsCollaborator) {
         throw createError('Assignee must be the owner or a collaborator', 400);
