@@ -232,5 +232,33 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response, next: Nex
   }
 });
 
+// DELETE /api/ideas/:id
+router.delete('/:id', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw createError('User not found', 404);
+    }
+
+    const { id } = req.params;
+    validateObjectId(id, 'Idea ID');
+
+    const idea = await Idea.findById(id);
+    if (!idea) {
+      throw createError('Idea not found', 404);
+    }
+
+    // Check ownership
+    if (idea.owner.toString() !== req.user._id.toString()) {
+      throw createError('Only the owner can delete this idea', 403);
+    }
+
+    await Idea.findByIdAndDelete(id);
+
+    res.json({ message: 'Idea deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
 

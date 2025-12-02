@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '../hooks/useToast';
 import api from '../utils/api';
+import ProfileViewModal from '../components/ProfileViewModal';
+import ChatModal from '../components/ChatModal';
 
 interface Idea {
   _id: string;
@@ -8,6 +10,7 @@ interface Idea {
   shortSummary: string;
   status: 'looking_for_collaborators' | 'in_progress' | 'completed';
   collaborators: Array<{ _id: string; name: string }>;
+  owner?: { _id: string; name: string };
   createdAt: string;
 }
 
@@ -41,8 +44,18 @@ interface User {
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [myIdeas, setMyIdeas] = useState<Idea[]>([]);
+  const [collaboratedIdeas, setCollaboratedIdeas] = useState<Idea[]>([]);
   const [collabRequests, setCollabRequests] = useState<CollaborationRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserName, setSelectedUserName] = useState<string | null>(null);
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [chatType, setChatType] = useState<'personal' | 'group'>('personal');
+  const [chatUserId, setChatUserId] = useState<string | null>(null);
+  const [chatIdeaId, setChatIdeaId] = useState<string | null>(null);
+  const [chatIdeaTitle, setChatIdeaTitle] = useState<string | null>(null);
+  const [deletingIdeaId, setDeletingIdeaId] = useState<string | null>(null);
   const { showError, showSuccess } = useToast();
 
   useEffect(() => {
@@ -67,6 +80,18 @@ export default function DashboardPage() {
       );
       setMyIdeas(userIdeas);
 
+      // Fetch ideas where user is a collaborator (but not owner)
+      const collabIdeas = allIdeas.filter(
+        (idea: Idea & { owner: { _id: string } }) => {
+          const isOwner = idea.owner._id === currentUser.id;
+          const isCollaborator = idea.collaborators.some(
+            (collab: { _id: string }) => collab._id === currentUser.id
+          );
+          return !isOwner && isCollaborator;
+        }
+      );
+      setCollaboratedIdeas(collabIdeas);
+
       // Fetch collaboration requests
       const requestsResponse = await api.get('/collab-requests/mine');
       setCollabRequests(requestsResponse.data);
@@ -89,6 +114,24 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDeleteIdea = async (ideaId: string) => {
+    if (!window.confirm('Are you sure you want to delete this idea? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingIdeaId(ideaId);
+      await api.delete(`/ideas/${ideaId}`);
+      showSuccess('Idea deleted successfully');
+      fetchDashboardData();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Failed to delete idea';
+      showError(errorMessage);
+    } finally {
+      setDeletingIdeaId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -106,6 +149,7 @@ export default function DashboardPage() {
     (sum, idea) => sum + idea.collaborators.length,
     0
   );
+  const totalCollaboratedIdeas = collaboratedIdeas.length;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -118,7 +162,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -126,6 +170,16 @@ export default function DashboardPage() {
                 <p className="text-3xl font-bold text-gray-900">{myIdeas.length}</p>
               </div>
               <div className="text-4xl">💡</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Collaborated Ideas</p>
+                <p className="text-3xl font-bold text-gray-900">{totalCollaboratedIdeas}</p>
+              </div>
+              <div className="text-4xl">🤝</div>
             </div>
           </div>
 
@@ -150,17 +204,25 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* My Ideas Section */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-900">My Ideas</h2>
-              <button
-                onClick={fetchDashboardData}
-                className="text-sm text-indigo-600 hover:text-indigo-700"
-              >
-                Refresh
-              </button>
+              <div className="flex gap-2">
+                <a
+                  href="/ideas"
+                  className="text-sm text-indigo-600 hover:text-indigo-700"
+                >
+                  View All →
+                </a>
+                <button
+                  onClick={fetchDashboardData}
+                  className="text-sm text-indigo-600 hover:text-indigo-700"
+                >
+                  Refresh
+                </button>
+              </div>
             </div>
 
             {myIdeas.length === 0 ? (
@@ -197,10 +259,17 @@ export default function DashboardPage() {
                     <p className="text-sm text-gray-600 mb-2 line-clamp-2">
                       {idea.shortSummary}
                     </p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
                       <span>{idea.collaborators.length} collaborator(s)</span>
                       <span>{new Date(idea.createdAt).toLocaleDateString()}</span>
                     </div>
+                    <button
+                      onClick={() => handleDeleteIdea(idea._id)}
+                      disabled={deletingIdeaId === idea._id}
+                      className="w-full mt-2 px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                    >
+                      {deletingIdeaId === idea._id ? 'Deleting...' : 'Delete Idea'}
+                    </button>
                   </div>
                 ))}
                 {myIdeas.length > 5 && (
@@ -277,6 +346,32 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     )}
+                    {request.status === 'accepted' && (
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => {
+                            setSelectedUserId(request.sender._id);
+                            setSelectedUserName(request.sender.name);
+                            setShowProfileModal(true);
+                          }}
+                          className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          View Profile
+                        </button>
+                        <button
+                          onClick={() => {
+                            setChatType('personal');
+                            setChatUserId(request.sender._id);
+                            setChatIdeaId(null);
+                            setSelectedUserName(request.sender.name);
+                            setShowChatModal(true);
+                          }}
+                          className="flex-1 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors"
+                        >
+                          Chat
+                        </button>
+                      </div>
+                    )}
                     <p className="text-xs text-gray-500 mt-2">
                       {new Date(request.createdAt).toLocaleDateString()}
                     </p>
@@ -285,8 +380,164 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* Collaborated Ideas Section */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Collaborated Ideas
+              </h2>
+              <button
+                onClick={fetchDashboardData}
+                className="text-sm text-indigo-600 hover:text-indigo-700"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {collaboratedIdeas.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">You haven't collaborated on any ideas yet.</p>
+                <p className="text-gray-400 text-sm mt-2">
+                  Accept collaboration requests to see ideas here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {collaboratedIdeas.map((idea) => (
+                  <div
+                    key={idea._id}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">{idea.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Owner: {(idea as any).owner?.name || 'Unknown'}
+                        </p>
+                      </div>
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          idea.status === 'looking_for_collaborators'
+                            ? 'bg-blue-100 text-blue-800'
+                            : idea.status === 'in_progress'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        {idea.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                      {idea.shortSummary}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                      <span>{idea.collaborators.length} collaborator(s)</span>
+                      <span>{new Date(idea.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setChatType('group');
+                        setChatIdeaId(idea._id);
+                        setChatUserId(null);
+                        setChatIdeaTitle(idea.title);
+                        setShowChatModal(true);
+                      }}
+                      className="w-full mt-2 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors"
+                    >
+                      Open Group Chat
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* My Ideas with Group Chat */}
+        {myIdeas.length > 0 && (
+          <div className="mt-6 bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">My Ideas - Group Chats</h2>
+            <div className="space-y-4">
+              {myIdeas
+                .filter((idea) => idea.collaborators.length > 0 || idea.status !== 'completed')
+                .map((idea) => (
+                  <div
+                    key={idea._id}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">{idea.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {idea.collaborators.length} collaborator(s)
+                        </p>
+                      </div>
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          idea.status === 'looking_for_collaborators'
+                            ? 'bg-blue-100 text-blue-800'
+                            : idea.status === 'in_progress'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        {idea.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    {(idea.collaborators.length > 0 || idea.status !== 'completed') && (
+                      <button
+                        onClick={() => {
+                          setChatType('group');
+                          setChatIdeaId(idea._id);
+                          setChatUserId(null);
+                          setChatIdeaTitle(idea.title);
+                          setShowChatModal(true);
+                        }}
+                        className="w-full mt-2 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors"
+                      >
+                        Open Group Chat
+                      </button>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Profile View Modal */}
+      <ProfileViewModal
+        userId={selectedUserId || ''}
+        isOpen={showProfileModal}
+        onClose={() => {
+          setShowProfileModal(false);
+          setSelectedUserId(null);
+          setSelectedUserName(null);
+        }}
+        onStartChat={(userId) => {
+          setChatType('personal');
+          setChatUserId(userId);
+          setChatIdeaId(null);
+          setShowChatModal(true);
+        }}
+      />
+
+      {/* Chat Modal */}
+      <ChatModal
+        isOpen={showChatModal}
+        onClose={() => {
+          setShowChatModal(false);
+          setChatUserId(null);
+          setChatIdeaId(null);
+          setChatIdeaTitle(null);
+        }}
+        type={chatType}
+        ideaId={chatIdeaId || undefined}
+        userId={chatUserId || undefined}
+        otherUserName={selectedUserName || undefined}
+        ideaTitle={chatIdeaTitle || undefined}
+      />
     </div>
   );
 }

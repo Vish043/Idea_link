@@ -56,6 +56,16 @@ export default function Navbar() {
                   Ideas
                 </Link>
                 <Link
+                  to="/chats"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive('/chats')
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Chats
+                </Link>
+                <Link
                   to="/profile"
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive('/profile')

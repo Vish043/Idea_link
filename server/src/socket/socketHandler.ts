@@ -18,6 +18,11 @@ interface SendMessagePayload {
   content: string;
 }
 
+interface SendPersonalMessagePayload {
+  recipientId: string;
+  content: string;
+}
+
 export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
   const io = new SocketIOServer(httpServer, {
     cors: {
@@ -55,6 +60,13 @@ export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
 
   io.on('connection', (socket: AuthenticatedSocket) => {
     console.log(`✅ User connected: ${socket.user?.email} (${socket.id})`);
+
+    // Join personal room for receiving messages immediately on connection
+    if (socket.user) {
+      const userRoom = `user:${socket.user._id.toString()}`;
+      socket.join(userRoom);
+      console.log(`📥 User ${socket.user.email} joined personal room: ${userRoom}`);
+    }
 
     // Join idea room
     socket.on('joinIdeaRoom', async (payload: JoinIdeaRoomPayload) => {
@@ -193,6 +205,98 @@ export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
       } catch (error) {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Failed to send message' });
+      }
+    });
+
+    // Send personal message
+    socket.on('sendPersonalMessage', async (payload: SendPersonalMessagePayload) => {
+      try {
+        if (!socket.user) {
+          socket.emit('error', { message: 'User not authenticated' });
+          return;
+        }
+
+        const { recipientId, content } = payload;
+
+        if (!recipientId || !content) {
+          socket.emit('error', { message: 'Recipient ID and content are required' });
+          return;
+        }
+
+        if (typeof content !== 'string' || content.trim().length === 0) {
+          socket.emit('error', { message: 'Message content cannot be empty' });
+          return;
+        }
+
+        // Validate ObjectId format
+        const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+        if (!objectIdRegex.test(recipientId)) {
+          socket.emit('error', { message: 'Invalid Recipient ID format' });
+          return;
+        }
+
+        // Check if recipient exists
+        const recipient = await User.findById(recipientId);
+        if (!recipient) {
+          socket.emit('error', { message: 'Recipient not found' });
+          return;
+        }
+
+        // Don't allow sending to self
+        if (recipientId === socket.user._id.toString()) {
+          socket.emit('error', { message: 'Cannot send message to yourself' });
+          return;
+        }
+
+        // Save message to database
+        const message = new Message({
+          sender: socket.user._id,
+          recipient: recipientId,
+          content: content.trim(),
+        });
+
+        await message.save();
+        await message.populate('sender', 'name email avatarUrl');
+        await message.populate('recipient', 'name email avatarUrl');
+
+        // Prepare message payload
+        const messagePayload = {
+          _id: message._id.toString(),
+          sender: {
+            _id: message.sender._id.toString(),
+            name: (message.sender as any).name,
+            email: (message.sender as any).email,
+            avatarUrl: (message.sender as any).avatarUrl || '',
+          },
+          content: message.content,
+          createdAt: message.createdAt,
+        };
+
+        // Send to recipient if they're connected
+        const recipientRoom = `user:${recipientId}`;
+        const clientsInRoom = io.sockets.adapter.rooms.get(recipientRoom);
+        console.log(`📤 Sending message to recipient room: ${recipientRoom}`);
+        console.log(`📊 Clients in recipient room: ${clientsInRoom ? clientsInRoom.size : 0}`);
+        
+        // Send to recipient room
+        io.to(recipientRoom).emit('newMessage', messagePayload);
+
+        // Also send back to sender for confirmation
+        socket.emit('newMessage', messagePayload);
+
+        console.log(`💬 Personal message sent from ${socket.user.email} (${socket.user._id}) to ${recipient.email} (${recipientId})`);
+      } catch (error) {
+        console.error('Error sending personal message:', error);
+        socket.emit('error', { message: 'Failed to send message' });
+      }
+    });
+
+    // Join personal chat room (for receiving messages)
+    socket.on('joinPersonalRoom', () => {
+      if (socket.user) {
+        const userRoom = `user:${socket.user._id.toString()}`;
+        socket.join(userRoom);
+        console.log(`📥 User ${socket.user.email} joined personal room: ${userRoom}`);
       }
     });
 

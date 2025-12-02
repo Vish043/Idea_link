@@ -31,8 +31,15 @@ export default function IdeasPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showCollabModal, setShowCollabModal] = useState(false);
+  const [collabMessage, setCollabMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'my-ideas'>('all');
   const { showError, showSuccess } = useToast();
 
   const [formData, setFormData] = useState({
@@ -49,11 +56,24 @@ export default function IdeasPage() {
   const [skillInput, setSkillInput] = useState('');
 
   useEffect(() => {
-    // Check authentication
+    // Check authentication and get user
     const token = localStorage.getItem('token');
     setIsAuthenticated(!!token);
+    if (token) {
+      fetchCurrentUser();
+    }
     fetchIdeas();
   }, []);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await api.get('/auth/me');
+      setCurrentUser(response.data);
+    } catch (err) {
+      // User not authenticated
+      setCurrentUser(null);
+    }
+  };
 
   const fetchIdeas = async () => {
     try {
@@ -150,6 +170,71 @@ export default function IdeasPage() {
     setSkillInput('');
   };
 
+  const handleViewIdea = async (ideaId: string) => {
+    try {
+      const response = await api.get(`/ideas/${ideaId}`);
+      setSelectedIdea(response.data);
+      setShowDetailModal(true);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Failed to load idea details';
+      showError(errorMessage);
+    }
+  };
+
+  const handleDeleteIdea = async (ideaId: string) => {
+    if (!window.confirm('Are you sure you want to delete this idea? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeleting(ideaId);
+      await api.delete(`/ideas/${ideaId}`);
+      showSuccess('Idea deleted successfully');
+      fetchIdeas();
+      if (selectedIdea?._id === ideaId) {
+        setShowDetailModal(false);
+        setSelectedIdea(null);
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Failed to delete idea';
+      showError(errorMessage);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleSendCollabRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedIdea || !collabMessage.trim()) {
+      showError('Please enter a message');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await api.post('/collab-requests', {
+        ideaId: selectedIdea._id,
+        message: collabMessage,
+      });
+      showSuccess('Collaboration request sent successfully!');
+      setShowCollabModal(false);
+      setCollabMessage('');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Failed to send collaboration request';
+      showError(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const isOwner = (idea: Idea) => {
+    return currentUser && idea.owner._id === currentUser.id;
+  };
+
+  const isCollaborator = (idea: Idea) => {
+    return currentUser && idea.collaborators.some((c) => c._id === currentUser.id);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -186,12 +271,36 @@ export default function IdeasPage() {
           <h1 className="text-3xl font-bold text-gray-900">Ideas</h1>
           <div className="flex gap-3">
             {isAuthenticated && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-              >
-                + Create Idea
-              </button>
+              <>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                >
+                  + Create Idea
+                </button>
+                <div className="flex border border-gray-300 rounded-md overflow-hidden">
+                  <button
+                    onClick={() => setFilter('all')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      filter === 'all'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    All Ideas
+                  </button>
+                  <button
+                    onClick={() => setFilter('my-ideas')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      filter === 'my-ideas'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    My Ideas
+                  </button>
+                </div>
+              </>
             )}
             <button
               onClick={fetchIdeas}
@@ -215,10 +324,18 @@ export default function IdeasPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ideas.map((idea) => (
+            {ideas
+              .filter((idea) => {
+                if (filter === 'my-ideas' && currentUser) {
+                  return idea.owner._id === currentUser.id;
+                }
+                return true;
+              })
+              .map((idea) => (
               <div
                 key={idea._id}
-                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => handleViewIdea(idea._id)}
               >
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="text-xl font-semibold text-gray-900">{idea.title}</h3>
@@ -249,6 +366,20 @@ export default function IdeasPage() {
                   <span>By {idea.owner.name}</span>
                   <span>{new Date(idea.createdAt).toLocaleDateString()}</span>
                 </div>
+                {isOwner(idea) && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteIdea(idea._id);
+                      }}
+                      disabled={deleting === idea._id}
+                      className="w-full px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                    >
+                      {deleting === idea._id ? 'Deleting...' : 'Delete Idea'}
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -440,6 +571,199 @@ export default function IdeasPage() {
                     <button
                       type="button"
                       onClick={handleCloseModal}
+                      className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Idea Detail Modal */}
+        {showDetailModal && selectedIdea && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedIdea.title}</h2>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <span>By {selectedIdea.owner.name}</span>
+                      <span>•</span>
+                      <span>{new Date(selectedIdea.createdAt).toLocaleDateString()}</span>
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          selectedIdea.status === 'looking_for_collaborators'
+                            ? 'bg-blue-100 text-blue-800'
+                            : selectedIdea.status === 'in_progress'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        {selectedIdea.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      setSelectedIdea(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Summary */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Summary</h3>
+                    <p className="text-gray-700">{selectedIdea.shortSummary}</p>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
+                    <p className="text-gray-700 whitespace-pre-wrap">{selectedIdea.description}</p>
+                  </div>
+
+                  {/* Tags */}
+                  {selectedIdea.tags.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Tags</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedIdea.tags.map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Required Skills */}
+                  {selectedIdea.requiredSkills.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Required Skills</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedIdea.requiredSkills.map((skill, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Collaborators */}
+                  {selectedIdea.collaborators.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Collaborators</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedIdea.collaborators.map((collab, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm"
+                          >
+                            {collab.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-4 border-t border-gray-200">
+                    {isOwner(selectedIdea) && (
+                      <button
+                        onClick={() => handleDeleteIdea(selectedIdea._id)}
+                        disabled={deleting === selectedIdea._id}
+                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        {deleting === selectedIdea._id ? 'Deleting...' : 'Delete Idea'}
+                      </button>
+                    )}
+                    {isAuthenticated && !isOwner(selectedIdea) && !isCollaborator(selectedIdea) && selectedIdea.status === 'looking_for_collaborators' && (
+                      <button
+                        onClick={() => setShowCollabModal(true)}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                      >
+                        Request Collaboration
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Collaboration Request Modal */}
+        {showCollabModal && selectedIdea && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Request Collaboration</h2>
+                  <button
+                    onClick={() => {
+                      setShowCollabModal(false);
+                      setCollabMessage('');
+                    }}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-gray-700 mb-2">
+                    <span className="font-semibold">Idea:</span> {selectedIdea.title}
+                  </p>
+                  <p className="text-gray-600 text-sm">
+                    Send a message to {selectedIdea.owner.name} explaining why you'd like to collaborate on this idea.
+                  </p>
+                </div>
+
+                <form onSubmit={handleSendCollabRequest} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Message <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      required
+                      rows={5}
+                      value={collabMessage}
+                      onChange={(e) => setCollabMessage(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="Tell them about your skills, experience, and why you're interested in collaborating..."
+                    />
+                  </div>
+
+                  <div className="flex gap-4 pt-4">
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="flex-1 px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {submitting ? 'Sending...' : 'Send Request'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCollabModal(false);
+                        setCollabMessage('');
+                      }}
                       className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
                     >
                       Cancel

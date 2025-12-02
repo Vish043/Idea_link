@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import { createError } from '../middleware/errorHandler';
-import { validateEmail } from '../utils/validation';
+import { validateEmail, validateObjectId } from '../utils/validation';
 
 const router = express.Router();
 
@@ -45,6 +45,34 @@ router.put('/me', authMiddleware, async (req: Request, res: Response, next: Next
       { new: true, runValidators: true }
     ).select('-passwordHash');
 
+    if (!user) {
+      throw createError('User not found', 404);
+    }
+
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      skills: user.skills,
+      interests: user.interests,
+      bio: user.bio,
+      avatarUrl: user.avatarUrl,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/users/:id
+router.get('/:id', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    validateObjectId(id, 'User ID');
+
+    const user = await User.findById(id).select('-passwordHash');
     if (!user) {
       throw createError('User not found', 404);
     }
