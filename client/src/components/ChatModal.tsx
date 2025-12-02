@@ -41,7 +41,7 @@ export default function ChatModal({
   const [connected, setConnected] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { showError, showSuccess } = useToast();
+  const { showError } = useToast();
 
   useEffect(() => {
     if (!isOpen) return;
