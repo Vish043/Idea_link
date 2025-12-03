@@ -37,6 +37,7 @@ export default function IdeasPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCollabModal, setShowCollabModal] = useState(false);
   const [collabMessage, setCollabMessage] = useState('');
+  const [collabResumeFile, setCollabResumeFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'my-ideas'>('all');
@@ -212,13 +213,28 @@ export default function IdeasPage() {
 
     try {
       setSubmitting(true);
-      await api.post('/collab-requests', {
-        ideaId: selectedIdea._id,
-        message: collabMessage,
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('ideaId', selectedIdea._id);
+      formData.append('message', collabMessage);
+      if (collabResumeFile) {
+        formData.append('resume', collabResumeFile);
+      }
+
+      // Use axios with FormData (will automatically set Content-Type to multipart/form-data)
+      const token = localStorage.getItem('token');
+      await api.post('/collab-requests', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
       });
+      
       showSuccess('Collaboration request sent successfully!');
       setShowCollabModal(false);
       setCollabMessage('');
+      setCollabResumeFile(null);
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || 'Failed to send collaboration request';
       showError(errorMessage);
@@ -719,6 +735,7 @@ export default function IdeasPage() {
                     onClick={() => {
                       setShowCollabModal(false);
                       setCollabMessage('');
+                      setCollabResumeFile(null);
                     }}
                     className="text-gray-400 hover:text-gray-600 text-2xl sm:text-3xl"
                   >
@@ -748,6 +765,37 @@ export default function IdeasPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       placeholder="Tell them about your skills, experience, and why you're interested in collaborating..."
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Resume (Optional)
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // Check file size (5MB limit)
+                          if (file.size > 5 * 1024 * 1024) {
+                            showError('File size must be less than 5MB');
+                            e.target.value = '';
+                            return;
+                          }
+                          setCollabResumeFile(file);
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    />
+                    {collabResumeFile && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        Selected: {collabResumeFile.name} ({(collabResumeFile.size / 1024).toFixed(1)} KB)
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Upload PDF, DOC, or DOCX file (max 5MB)
+                    </p>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">

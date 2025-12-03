@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../utils/api';
 import { useToast } from '../hooks/useToast';
+import { getImageUrl } from '../utils/imageUtils';
 
 interface User {
   id: string;
@@ -11,6 +12,7 @@ interface User {
   interests: string[];
   bio: string;
   avatarUrl: string;
+  resumeUrl?: string;
 }
 
 interface ProfileViewModalProps {
@@ -70,9 +72,13 @@ export default function ProfileViewModal({ userId, isOpen, onClose, onStartChat 
               <div className="flex items-start gap-3 sm:gap-4">
                 {user.avatarUrl ? (
                   <img
-                    src={user.avatarUrl}
+                    src={getImageUrl(user.avatarUrl)}
                     alt={user.name}
                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover flex-shrink-0"
+                    onError={(e) => {
+                      // Fallback to initial if image fails to load
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                   />
                 ) : (
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-100 flex items-center justify-center text-xl sm:text-2xl font-bold text-indigo-600 flex-shrink-0">
@@ -127,6 +133,36 @@ export default function ProfileViewModal({ userId, isOpen, onClose, onStartChat 
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Resume */}
+              {user.resumeUrl && (
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Resume</h4>
+                  <a
+                    href={user.resumeUrl.startsWith('http') 
+                      ? user.resumeUrl 
+                      : `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}${user.resumeUrl.startsWith('/') ? '' : '/'}${user.resumeUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                  >
+                    <svg
+                      className="w-5 h-5 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    View Resume
+                  </a>
                 </div>
               )}
 

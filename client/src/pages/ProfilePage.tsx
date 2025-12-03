@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '../hooks/useToast';
 import api from '../utils/api';
+import { getImageUrl } from '../utils/imageUtils';
 
 interface User {
   id: string;
@@ -11,6 +12,7 @@ interface User {
   interests: string[];
   bio: string;
   avatarUrl: string;
+  resumeUrl: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,6 +24,11 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState<Partial<User>>({});
   const [newSkill, setNewSkill] = useState('');
   const [newInterest, setNewInterest] = useState('');
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const { showError, showSuccess } = useToast();
 
   useEffect(() => {
@@ -81,12 +88,87 @@ export default function ProfilePage() {
     }));
   };
 
+  const handleResumeUpload = async (file: File): Promise<string | null> => {
+    try {
+      setUploadingResume(true);
+      const uploadFormData = new FormData();
+      uploadFormData.append('resume', file);
+
+      const token = localStorage.getItem('token');
+      const response = await api.post('/uploads/resume', uploadFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      return response.data.fileUrl;
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Failed to upload resume';
+      showError(errorMessage);
+      return null;
+    } finally {
+      setUploadingResume(false);
+    }
+  };
+
+  const handleAvatarUpload = async (file: File): Promise<string | null> => {
+    try {
+      setUploadingAvatar(true);
+      const uploadFormData = new FormData();
+      uploadFormData.append('avatar', file);
+
+      const token = localStorage.getItem('token');
+      const response = await api.post('/uploads/avatar', uploadFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      return response.data.fileUrl;
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Failed to upload avatar';
+      showError(errorMessage);
+      return null;
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await api.put('/users/me', formData);
+      // Upload avatar file if selected
+      let avatarUrl = formData.avatarUrl;
+      if (avatarFile) {
+        const uploadedUrl = await handleAvatarUpload(avatarFile);
+        if (uploadedUrl) {
+          avatarUrl = uploadedUrl;
+        } else {
+          return; // Stop if upload failed
+        }
+      }
+
+      // Upload resume file if selected
+      let resumeUrl = formData.resumeUrl;
+      if (resumeFile) {
+        const uploadedUrl = await handleResumeUpload(resumeFile);
+        if (uploadedUrl) {
+          resumeUrl = uploadedUrl;
+        } else {
+          return; // Stop if upload failed
+        }
+      }
+
+      // Update profile with avatar and resume URLs
+      const updateData = { ...formData, avatarUrl, resumeUrl };
+      const response = await api.put('/users/me', updateData);
       setUser(response.data);
       setEditing(false);
+      setResumeFile(null);
+      setAvatarFile(null);
+      setAvatarPreview(null);
       showSuccess('Profile updated successfully');
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || 'Failed to update profile';
@@ -97,6 +179,37 @@ export default function ProfilePage() {
   const handleCancel = () => {
     setFormData(user || {});
     setEditing(false);
+    setResumeFile(null);
+    setAvatarFile(null);
+    setAvatarPreview(null);
+  };
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (2MB limit)
+      if (file.size > 2 * 1024 * 1024) {
+        showError('Image size must be less than 2MB');
+        e.target.value = '';
+        return;
+      }
+      
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        showError('Please select an image file');
+        e.target.value = '';
+        return;
+      }
+
+      setAvatarFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   if (loading) {
@@ -196,17 +309,158 @@ export default function ProfilePage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Avatar URL
+                      Profile Photo
                     </label>
-                    <input
-                      type="url"
-                      name="avatarUrl"
-                      value={formData.avatarUrl || ''}
-                      onChange={handleInputChange}
-                      disabled={!editing}
-                      placeholder="https://example.com/avatar.jpg"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-                    />
+                    {editing ? (
+                      <>
+                        <div className="mb-3">
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                            onChange={handleAvatarFileChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                            disabled={uploadingAvatar}
+                          />
+                          {uploadingAvatar && (
+                            <p className="text-xs text-blue-600 mt-1">Uploading photo...</p>
+                          )}
+                          {avatarFile && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              Selected: {avatarFile.name} ({(avatarFile.size / 1024).toFixed(1)} KB)
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-500 mt-1">
+                            Upload JPEG, PNG, GIF, or WebP image (max 2MB)
+                          </p>
+                        </div>
+                        {(avatarPreview || formData.avatarUrl) && (
+                          <div className="mt-2">
+                            <p className="text-xs text-gray-600 mb-1">Preview:</p>
+                            <img
+                              src={avatarPreview || getImageUrl(formData.avatarUrl)}
+                              alt="Avatar preview"
+                              className="w-20 h-20 rounded-full object-cover border-2 border-gray-300"
+                            />
+                          </div>
+                        )}
+                        {formData.avatarUrl && !avatarFile && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            Or enter URL: <input
+                              type="url"
+                              name="avatarUrl"
+                              value={formData.avatarUrl}
+                              onChange={handleInputChange}
+                              placeholder="https://example.com/avatar.jpg"
+                              className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                            />
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        {formData.avatarUrl ? (
+                          <img
+                            src={getImageUrl(formData.avatarUrl)}
+                            alt="Avatar"
+                            className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"
+                            onError={(e) => {
+                              // Fallback to initial if image fails to load
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-2xl font-bold text-indigo-600">
+                            {formData.name?.charAt(0).toUpperCase() || 'U'}
+                          </div>
+                        )}
+                        {!formData.avatarUrl && (
+                          <p className="text-sm text-gray-500">No photo uploaded</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Resume
+                    </label>
+                    {editing ? (
+                      <>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              // Check file size (5MB limit)
+                              if (file.size > 5 * 1024 * 1024) {
+                                showError('File size must be less than 5MB');
+                                e.target.value = '';
+                                return;
+                              }
+                              setResumeFile(file);
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                          disabled={uploadingResume}
+                        />
+                        {resumeFile && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            New file: {resumeFile.name} ({(resumeFile.size / 1024).toFixed(1)} KB)
+                          </p>
+                        )}
+                        {formData.resumeUrl && !resumeFile && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Current resume: <a
+                              href={formData.resumeUrl.startsWith('http') 
+                                ? formData.resumeUrl 
+                                : `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}${formData.resumeUrl.startsWith('/') ? '' : '/'}${formData.resumeUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-600 hover:text-indigo-700"
+                            >
+                              View current resume
+                            </a>
+                          </p>
+                        )}
+                        {uploadingResume && (
+                          <p className="text-xs text-blue-600 mt-1">Uploading resume...</p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                          Upload PDF, DOC, or DOCX file (max 5MB)
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        {formData.resumeUrl ? (
+                          <a
+                            href={formData.resumeUrl.startsWith('http') 
+                              ? formData.resumeUrl 
+                              : `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}${formData.resumeUrl.startsWith('/') ? '' : '/'}${formData.resumeUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm"
+                          >
+                            <svg
+                              className="w-4 h-4 mr-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                            View Resume
+                          </a>
+                        ) : (
+                          <p className="text-sm text-gray-500">No resume uploaded</p>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

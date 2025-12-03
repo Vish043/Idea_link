@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '../hooks/useToast';
 import api from '../utils/api';
 import ChatModal from '../components/ChatModal';
+import { getImageUrl } from '../utils/imageUtils';
 
 interface PersonalChat {
   user: {
@@ -132,9 +133,13 @@ export default function ChatListPage() {
                     <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                       {chat.user.avatarUrl ? (
                         <img
-                          src={chat.user.avatarUrl}
+                          src={getImageUrl(chat.user.avatarUrl)}
                           alt={chat.user.name}
                           className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover flex-shrink-0"
+                          onError={(e) => {
+                            // Fallback to initial if image fails to load
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
                         />
                       ) : (
                         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-indigo-100 flex items-center justify-center text-base sm:text-lg font-bold text-indigo-600 flex-shrink-0">
