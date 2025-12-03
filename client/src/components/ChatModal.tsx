@@ -221,34 +221,34 @@ export default function ChatModal({
   const chatTitle = type === 'group' ? ideaTitle || 'Group Chat' : `Chat with ${otherUserName || 'User'}`;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl h-[600px] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-none sm:rounded-lg shadow-xl w-full h-full sm:h-[600px] sm:max-w-2xl flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">{chatTitle}</h2>
-            <p className={`text-sm ${connected ? 'text-green-600' : 'text-red-600'}`}>
+        <div className="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-center">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">{chatTitle}</h2>
+            <p className={`text-xs sm:text-sm ${connected ? 'text-green-600' : 'text-red-600'}`}>
               {connected ? '● Connected' : '● Disconnected'}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
+            className="text-gray-400 hover:text-gray-600 text-2xl sm:text-3xl ml-2 flex-shrink-0"
           >
             ×
           </button>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50">
           {loading ? (
             <div className="text-center py-8">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2"></div>
-              <p className="text-gray-600">Loading messages...</p>
+              <p className="text-sm sm:text-base text-gray-600">Loading messages...</p>
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <p>No messages yet. Start the conversation!</p>
+              <p className="text-sm sm:text-base">No messages yet. Start the conversation!</p>
             </div>
           ) : (
             messages.map((message) => {
@@ -259,7 +259,7 @@ export default function ChatModal({
                   className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                    className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-lg ${
                       isOwnMessage
                         ? 'bg-indigo-600 text-white'
                         : 'bg-white text-gray-900 border border-gray-200'
@@ -276,7 +276,7 @@ export default function ChatModal({
                         })}
                       </span>
                     </div>
-                    <p className="text-sm">{message.content}</p>
+                    <p className="text-sm break-words">{message.content}</p>
                   </div>
                 </div>
               );
@@ -286,20 +286,20 @@ export default function ChatModal({
         </div>
 
         {/* Input */}
-        <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200">
+        <form onSubmit={handleSendMessage} className="p-3 sm:p-4 border-t border-gray-200">
           <div className="flex gap-2">
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type a message..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex-1 px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               disabled={!connected}
             />
             <button
               type="submit"
               disabled={!newMessage.trim() || !connected}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Send
             </button>

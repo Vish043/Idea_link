@@ -122,10 +122,10 @@ For questions about these terms, please contact us through the platform.
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
       <div className="container mx-auto px-4 max-w-4xl">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <div className="prose prose-lg max-w-none">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8">
+          <div className="prose prose-sm sm:prose-lg max-w-none">
             <div className="space-y-2">
               {formatContent(termsContent)}
             </div>

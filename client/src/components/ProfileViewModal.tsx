@@ -46,14 +46,14 @@ export default function ProfileViewModal({ userId, isOpen, onClose, onStartChat 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">User Profile</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+        <div className="p-4 sm:p-6">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">User Profile</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
+              className="text-gray-400 hover:text-gray-600 text-2xl sm:text-3xl"
             >
               ×
             </button>
@@ -67,22 +67,22 @@ export default function ProfileViewModal({ userId, isOpen, onClose, onStartChat 
           ) : user ? (
             <div className="space-y-6">
               {/* Avatar and Basic Info */}
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-3 sm:gap-4">
                 {user.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
                     alt={user.name}
-                    className="w-20 h-20 rounded-full object-cover"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center text-2xl font-bold text-indigo-600">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-100 flex items-center justify-center text-xl sm:text-2xl font-bold text-indigo-600 flex-shrink-0">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="flex-1">
-                  <h3 className="text-2xl font-semibold text-gray-900">{user.name}</h3>
-                  <p className="text-gray-600">{user.email}</p>
-                  <span className="inline-block mt-2 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 break-words">{user.name}</h3>
+                  <p className="text-sm sm:text-base text-gray-600 break-words">{user.email}</p>
+                  <span className="inline-block mt-2 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs sm:text-sm">
                     {user.role}
                   </span>
                 </div>

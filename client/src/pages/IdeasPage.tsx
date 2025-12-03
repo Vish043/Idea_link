@@ -265,23 +265,23 @@ export default function IdeasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Ideas</h1>
-          <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Ideas</h1>
+          <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
             {isAuthenticated && (
               <>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm sm:text-base flex-1 sm:flex-none"
                 >
                   + Create Idea
                 </button>
-                <div className="flex border border-gray-300 rounded-md overflow-hidden">
+                <div className="flex border border-gray-300 rounded-md overflow-hidden flex-1 sm:flex-none">
                   <button
                     onClick={() => setFilter('all')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
                       filter === 'all'
                         ? 'bg-indigo-600 text-white'
                         : 'bg-white text-gray-700 hover:bg-gray-50'
@@ -291,7 +291,7 @@ export default function IdeasPage() {
                   </button>
                   <button
                     onClick={() => setFilter('my-ideas')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
                       filter === 'my-ideas'
                         ? 'bg-indigo-600 text-white'
                         : 'bg-white text-gray-700 hover:bg-gray-50'
@@ -304,7 +304,7 @@ export default function IdeasPage() {
             )}
             <button
               onClick={fetchIdeas}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+              className="px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm sm:text-base flex-1 sm:flex-none"
             >
               Refresh
             </button>
@@ -374,7 +374,7 @@ export default function IdeasPage() {
                         handleDeleteIdea(idea._id);
                       }}
                       disabled={deleting === idea._id}
-                      className="w-full px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                      className="w-full px-3 py-2.5 sm:py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 min-h-[44px] sm:min-h-0"
                     >
                       {deleting === idea._id ? 'Deleting...' : 'Delete Idea'}
                     </button>
@@ -387,14 +387,14 @@ export default function IdeasPage() {
 
         {/* Create Idea Modal */}
         {showCreateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Create New Idea</h2>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+              <div className="p-4 sm:p-6">
+                <div className="flex justify-between items-center mb-4 sm:mb-6">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Create New Idea</h2>
                   <button
                     onClick={handleCloseModal}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                    className="text-gray-400 hover:text-gray-600 text-2xl sm:text-3xl"
                   >
                     ×
                   </button>
@@ -584,12 +584,12 @@ export default function IdeasPage() {
 
         {/* Idea Detail Modal */}
         {showDetailModal && selectedIdea && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedIdea.title}</h2>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+              <div className="p-4 sm:p-6">
+                <div className="flex justify-between items-start mb-4 sm:mb-6 gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 break-words">{selectedIdea.title}</h2>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
                       <span>By {selectedIdea.owner.name}</span>
                       <span>•</span>
@@ -683,12 +683,12 @@ export default function IdeasPage() {
                   )}
 
                   {/* Actions */}
-                  <div className="flex gap-3 pt-4 border-t border-gray-200">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
                     {isOwner(selectedIdea) && (
                       <button
                         onClick={() => handleDeleteIdea(selectedIdea._id)}
                         disabled={deleting === selectedIdea._id}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                        className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
                       >
                         {deleting === selectedIdea._id ? 'Deleting...' : 'Delete Idea'}
                       </button>
@@ -696,7 +696,7 @@ export default function IdeasPage() {
                     {isAuthenticated && !isOwner(selectedIdea) && !isCollaborator(selectedIdea) && selectedIdea.status === 'looking_for_collaborators' && (
                       <button
                         onClick={() => setShowCollabModal(true)}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                        className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
                       >
                         Request Collaboration
                       </button>
@@ -710,17 +710,17 @@ export default function IdeasPage() {
 
         {/* Collaboration Request Modal */}
         {showCollabModal && selectedIdea && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Request Collaboration</h2>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+              <div className="p-4 sm:p-6">
+                <div className="flex justify-between items-center mb-4 sm:mb-6">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Request Collaboration</h2>
                   <button
                     onClick={() => {
                       setShowCollabModal(false);
                       setCollabMessage('');
                     }}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                    className="text-gray-400 hover:text-gray-600 text-2xl sm:text-3xl"
                   >
                     ×
                   </button>
@@ -750,7 +750,7 @@ export default function IdeasPage() {
                     />
                   </div>
 
-                  <div className="flex gap-4 pt-4">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
                     <button
                       type="submit"
                       disabled={submitting}
@@ -764,7 +764,7 @@ export default function IdeasPage() {
                         setShowCollabModal(false);
                         setCollabMessage('');
                       }}
-                      className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                      className="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
                     >
                       Cancel
                     </button>

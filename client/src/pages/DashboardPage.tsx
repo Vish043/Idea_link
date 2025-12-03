@@ -152,73 +152,73 @@ export default function DashboardPage() {
   const totalCollaboratedIdeas = collaboratedIdeas.length;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
       <div className="container mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             Welcome back, {user?.name || 'User'}!
           </h1>
-          <p className="text-gray-600">Here's an overview of your activity</p>
+          <p className="text-sm sm:text-base text-gray-600">Here's an overview of your activity</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">My Ideas</p>
-                <p className="text-3xl font-bold text-gray-900">{myIdeas.length}</p>
+                <p className="text-gray-600 text-xs sm:text-sm">My Ideas</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{myIdeas.length}</p>
               </div>
-              <div className="text-4xl">💡</div>
+              <div className="text-2xl sm:text-4xl">💡</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">Collaborated Ideas</p>
-                <p className="text-3xl font-bold text-gray-900">{totalCollaboratedIdeas}</p>
+                <p className="text-gray-600 text-xs sm:text-sm">Collaborated Ideas</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{totalCollaboratedIdeas}</p>
               </div>
-              <div className="text-4xl">🤝</div>
+              <div className="text-2xl sm:text-4xl">🤝</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">Active Ideas</p>
-                <p className="text-3xl font-bold text-gray-900">{activeIdeas}</p>
+                <p className="text-gray-600 text-xs sm:text-sm">Active Ideas</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{activeIdeas}</p>
               </div>
-              <div className="text-4xl">🚀</div>
+              <div className="text-2xl sm:text-4xl">🚀</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">Collaborators</p>
-                <p className="text-3xl font-bold text-gray-900">{totalCollaborators}</p>
+                <p className="text-gray-600 text-xs sm:text-sm">Collaborators</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{totalCollaborators}</p>
               </div>
-              <div className="text-4xl">👥</div>
+              <div className="text-2xl sm:text-4xl">👥</div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
           {/* My Ideas Section */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">My Ideas</h2>
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">My Ideas</h2>
               <div className="flex gap-2">
                 <a
                   href="/ideas"
-                  className="text-sm text-indigo-600 hover:text-indigo-700"
+                  className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-700"
                 >
                   View All →
                 </a>
                 <button
                   onClick={fetchDashboardData}
-                  className="text-sm text-indigo-600 hover:text-indigo-700"
+                  className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-700"
                 >
                   Refresh
                 </button>
@@ -266,7 +266,7 @@ export default function DashboardPage() {
                     <button
                       onClick={() => handleDeleteIdea(idea._id)}
                       disabled={deletingIdeaId === idea._id}
-                      className="w-full mt-2 px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                      className="w-full mt-2 px-3 py-2.5 sm:py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 min-h-[44px] sm:min-h-0"
                     >
                       {deletingIdeaId === idea._id ? 'Deleting...' : 'Delete Idea'}
                     </button>
@@ -285,9 +285,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Collaboration Requests Section */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
                 Collaboration Requests
               </h2>
               {pendingRequests.length > 0 && (
@@ -331,30 +331,30 @@ export default function DashboardPage() {
                     </div>
                     <p className="text-sm text-gray-700 mb-3">{request.message}</p>
                     {request.status === 'pending' && (
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <button
                           onClick={() => handleRequestAction(request._id, 'accepted')}
-                          className="flex-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                          className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
                         >
                           Accept
                         </button>
                         <button
                           onClick={() => handleRequestAction(request._id, 'rejected')}
-                          className="flex-1 px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
+                          className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
                         >
                           Reject
                         </button>
                       </div>
                     )}
                     {request.status === 'accepted' && (
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex flex-col sm:flex-row gap-2 mt-2">
                         <button
                           onClick={() => {
                             setSelectedUserId(request.sender._id);
                             setSelectedUserName(request.sender.name);
                             setShowProfileModal(true);
                           }}
-                          className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                          className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                         >
                           View Profile
                         </button>
@@ -366,7 +366,7 @@ export default function DashboardPage() {
                             setSelectedUserName(request.sender.name);
                             setShowChatModal(true);
                           }}
-                          className="flex-1 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors"
+                          className="flex-1 px-3 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors"
                         >
                           Chat
                         </button>
@@ -382,14 +382,14 @@ export default function DashboardPage() {
           </div>
 
           {/* Collaborated Ideas Section */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
                 Collaborated Ideas
               </h2>
               <button
                 onClick={fetchDashboardData}
-                className="text-sm text-indigo-600 hover:text-indigo-700"
+                className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-700"
               >
                 Refresh
               </button>
@@ -443,7 +443,7 @@ export default function DashboardPage() {
                         setChatIdeaTitle(idea.title);
                         setShowChatModal(true);
                       }}
-                      className="w-full mt-2 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors"
+                      className="w-full mt-2 px-3 py-2.5 sm:py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors min-h-[44px] sm:min-h-0"
                     >
                       Open Group Chat
                     </button>
@@ -456,8 +456,8 @@ export default function DashboardPage() {
 
         {/* My Ideas with Group Chat */}
         {myIdeas.length > 0 && (
-          <div className="mt-6 bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">My Ideas - Group Chats</h2>
+          <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">My Ideas - Group Chats</h2>
             <div className="space-y-4">
               {myIdeas
                 .filter((idea) => idea.collaborators.length > 0 || idea.status !== 'completed')
@@ -494,7 +494,7 @@ export default function DashboardPage() {
                           setChatIdeaTitle(idea.title);
                           setShowChatModal(true);
                         }}
-                        className="w-full mt-2 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors"
+                        className="w-full mt-2 px-3 py-2.5 sm:py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors min-h-[44px] sm:min-h-0"
                       >
                         Open Group Chat
                       </button>
