@@ -4,6 +4,7 @@ export interface ICollaborationRequest extends Document {
   idea: Types.ObjectId;
   sender: Types.ObjectId;
   message: string;
+  resumeUrl?: string;
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: Date;
   updatedAt: Date;
@@ -24,6 +25,11 @@ const CollaborationRequestSchema = new Schema<ICollaborationRequest>(
     message: {
       type: String,
       required: true,
+      trim: true,
+    },
+    resumeUrl: {
+      type: String,
+      default: '',
       trim: true,
     },
     status: {

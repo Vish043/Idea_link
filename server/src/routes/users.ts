@@ -13,7 +13,7 @@ router.put('/me', authMiddleware, async (req: Request, res: Response, next: Next
       throw createError('User not found', 404);
     }
 
-    const { name, email, role, skills, interests, bio, avatarUrl } = req.body;
+    const { name, email, role, skills, interests, bio, avatarUrl, resumeUrl } = req.body;
 
     // Validate email if provided
     if (email && email !== req.user.email) {
@@ -39,8 +39,9 @@ router.put('/me', authMiddleware, async (req: Request, res: Response, next: Next
         ...(role && { role }),
         ...(skills !== undefined && { skills }),
         ...(interests !== undefined && { interests }),
-        ...(bio !== undefined && { bio }),
-        ...(avatarUrl !== undefined && { avatarUrl }),
+      ...(bio !== undefined && { bio }),
+      ...(avatarUrl !== undefined && { avatarUrl }),
+      ...(resumeUrl !== undefined && { resumeUrl }),
       },
       { new: true, runValidators: true }
     ).select('-passwordHash');
@@ -58,6 +59,7 @@ router.put('/me', authMiddleware, async (req: Request, res: Response, next: Next
       interests: user.interests,
       bio: user.bio,
       avatarUrl: user.avatarUrl,
+      resumeUrl: user.resumeUrl,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });
@@ -86,6 +88,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response, next: Nex
       interests: user.interests,
       bio: user.bio,
       avatarUrl: user.avatarUrl,
+      resumeUrl: user.resumeUrl,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });

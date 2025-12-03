@@ -55,6 +55,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
         interests: user.interests,
         bio: user.bio,
         avatarUrl: user.avatarUrl,
+        resumeUrl: user.resumeUrl,
       },
     });
   } catch (error) {
@@ -97,6 +98,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
         interests: user.interests,
         bio: user.bio,
         avatarUrl: user.avatarUrl,
+        resumeUrl: user.resumeUrl,
       },
     });
   } catch (error) {
@@ -120,6 +122,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response, next: Next
       interests: req.user.interests,
       bio: req.user.bio,
       avatarUrl: req.user.avatarUrl,
+      resumeUrl: req.user.resumeUrl,
       createdAt: req.user.createdAt,
       updatedAt: req.user.updatedAt,
     });

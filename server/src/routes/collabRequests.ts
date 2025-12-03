@@ -4,66 +4,89 @@ import { Idea } from '../models/Idea';
 import { authMiddleware } from '../middleware/auth';
 import { createError } from '../middleware/errorHandler';
 import { validateObjectId } from '../utils/validation';
+import { singleResumeUpload } from '../middleware/upload';
+import { uploadFile } from '../utils/storage';
 
 const router = express.Router();
 
 // POST /api/collab-requests
-router.post('/', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    if (!req.user) {
-      throw createError('User not found', 404);
-    }
+router.post('/', authMiddleware, (req: Request, res: Response, next: NextFunction) => {
+  singleResumeUpload(req, res, async (err: any) => {
+    try {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return next(createError('File size exceeds 5MB limit', 400));
+        }
+        return next(err);
+      }
 
-    const { ideaId, message } = req.body;
+      if (!req.user) {
+        throw createError('User not found', 404);
+      }
 
-    if (!ideaId || !message) {
-      throw createError('Idea ID and message are required', 400);
-    }
+      // Parse form data (multer handles file, body parser handles JSON)
+      const { ideaId, message } = req.body;
+      
+      // Upload file if provided (cloud or local based on configuration)
+      let resumeUrl = '';
+      if (req.file) {
+        try {
+          resumeUrl = await uploadFile(req.file);
+        } catch (error: any) {
+          return next(createError(error.message || 'Failed to upload resume', 500));
+        }
+      }
 
-    validateObjectId(ideaId, 'Idea ID');
+      if (!ideaId || !message) {
+        throw createError('Idea ID and message are required', 400);
+      }
 
-    // Check if idea exists
-    const idea = await Idea.findById(ideaId);
-    if (!idea) {
-      throw createError('Idea not found', 404);
-    }
+      validateObjectId(ideaId, 'Idea ID');
 
-    // Check if user is the owner
-    if (idea.owner.toString() === req.user._id.toString()) {
-      throw createError('Cannot send collaboration request to your own idea', 400);
-    }
+      // Check if idea exists
+      const idea = await Idea.findById(ideaId);
+      if (!idea) {
+        throw createError('Idea not found', 404);
+      }
 
-    // Check if already a collaborator
-    if (idea.collaborators.some((id) => id.toString() === req.user!._id.toString())) {
-      throw createError('You are already a collaborator on this idea', 400);
-    }
+      // Check if user is the owner
+      if (idea.owner.toString() === req.user._id.toString()) {
+        throw createError('Cannot send collaboration request to your own idea', 400);
+      }
 
-    // Check if request already exists
-    const existingRequest = await CollaborationRequest.findOne({
-      idea: ideaId,
-      sender: req.user._id,
-      status: 'pending',
-    });
+      // Check if already a collaborator
+      if (idea.collaborators.some((id) => id.toString() === req.user!._id.toString())) {
+        throw createError('You are already a collaborator on this idea', 400);
+      }
 
-    if (existingRequest) {
-      throw createError('You already have a pending request for this idea', 409);
-    }
+      // Check if request already exists
+      const existingRequest = await CollaborationRequest.findOne({
+        idea: ideaId,
+        sender: req.user._id,
+        status: 'pending',
+      });
 
-    const collabRequest = new CollaborationRequest({
-      idea: ideaId,
-      sender: req.user._id,
-      message,
-      status: 'pending',
-    });
+      if (existingRequest) {
+        throw createError('You already have a pending request for this idea', 409);
+      }
+
+      const collabRequest = new CollaborationRequest({
+        idea: ideaId,
+        sender: req.user._id,
+        message,
+        resumeUrl: resumeUrl || '',
+        status: 'pending',
+      });
 
     await collabRequest.save();
-    await collabRequest.populate('idea', 'title owner');
-    await collabRequest.populate('sender', 'name email avatarUrl');
+      await collabRequest.populate('idea', 'title owner');
+      await collabRequest.populate('sender', 'name email avatarUrl');
 
-    res.status(201).json(collabRequest);
-  } catch (error) {
-    next(error);
-  }
+      res.status(201).json(collabRequest);
+    } catch (error) {
+      next(error);
+    }
+  });
 });
 
 // GET /api/collab-requests/mine

@@ -9,6 +9,7 @@ export interface IUser extends Document {
   interests: string[];
   bio: string;
   avatarUrl: string;
+  resumeUrl: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +50,10 @@ const UserSchema = new Schema<IUser>(
       default: '',
     },
     avatarUrl: {
+      type: String,
+      default: '',
+    },
+    resumeUrl: {
       type: String,
       default: '',
     },
