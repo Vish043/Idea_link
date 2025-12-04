@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '../hooks/useToast';
-import api from '../utils/api';
+import api, { getFileUrl } from '../utils/api';
 import { getImageUrl } from '../utils/imageUtils';
+import PDFViewerModal from '../components/PDFViewerModal';
 
 interface User {
   id: string;
@@ -29,6 +30,8 @@ export default function ProfilePage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [pdfViewerUrl, setPdfViewerUrl] = useState<string>('');
   const { showError, showSuccess } = useToast();
 
   useEffect(() => {
@@ -411,16 +414,15 @@ export default function ProfilePage() {
                         )}
                         {formData.resumeUrl && !resumeFile && (
                           <p className="text-xs text-gray-600 mt-1">
-                            Current resume: <a
-                              href={formData.resumeUrl.startsWith('http') 
-                                ? formData.resumeUrl 
-                                : `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}${formData.resumeUrl.startsWith('/') ? '' : '/'}${formData.resumeUrl}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-indigo-600 hover:text-indigo-700"
+                            Current resume: <button
+                              onClick={() => {
+                                setPdfViewerUrl(getFileUrl(formData.resumeUrl));
+                                setPdfViewerOpen(true);
+                              }}
+                              className="text-indigo-600 hover:text-indigo-700 underline"
                             >
                               View current resume
-                            </a>
+                            </button>
                           </p>
                         )}
                         {uploadingResume && (
@@ -433,12 +435,11 @@ export default function ProfilePage() {
                     ) : (
                       <>
                         {formData.resumeUrl ? (
-                          <a
-                            href={formData.resumeUrl.startsWith('http') 
-                              ? formData.resumeUrl 
-                              : `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}${formData.resumeUrl.startsWith('/') ? '' : '/'}${formData.resumeUrl}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => {
+                              setPdfViewerUrl(getFileUrl(formData.resumeUrl));
+                              setPdfViewerOpen(true);
+                            }}
                             className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm"
                           >
                             <svg
@@ -455,7 +456,7 @@ export default function ProfilePage() {
                               />
                             </svg>
                             View Resume
-                          </a>
+                          </button>
                         ) : (
                           <p className="text-sm text-gray-500">No resume uploaded</p>
                         )}
@@ -610,6 +611,14 @@ export default function ProfilePage() {
           </form>
         </div>
       </div>
+      
+      {/* PDF Viewer Modal */}
+      <PDFViewerModal
+        isOpen={pdfViewerOpen}
+        onClose={() => setPdfViewerOpen(false)}
+        pdfUrl={pdfViewerUrl}
+        filename={formData.resumeUrl ? formData.resumeUrl.split('/').pop() || 'Resume' : 'Resume'}
+      />
     </div>
   );
 }

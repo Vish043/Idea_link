@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import api from '../utils/api';
+import api, { getFileUrl } from '../utils/api';
 import { useToast } from '../hooks/useToast';
 import { getImageUrl } from '../utils/imageUtils';
+import PDFViewerModal from './PDFViewerModal';
 
 interface User {
   id: string;
@@ -25,6 +26,8 @@ interface ProfileViewModalProps {
 export default function ProfileViewModal({ userId, isOpen, onClose, onStartChat }: ProfileViewModalProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [pdfViewerUrl, setPdfViewerUrl] = useState<string>('');
   const { showError } = useToast();
 
   useEffect(() => {
@@ -140,12 +143,11 @@ export default function ProfileViewModal({ userId, isOpen, onClose, onStartChat 
               {user.resumeUrl && (
                 <div>
                   <h4 className="text-lg font-semibold text-gray-900 mb-2">Resume</h4>
-                  <a
-                    href={user.resumeUrl.startsWith('http') 
-                      ? user.resumeUrl 
-                      : `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}${user.resumeUrl.startsWith('/') ? '' : '/'}${user.resumeUrl}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => {
+                      setPdfViewerUrl(getFileUrl(user.resumeUrl!));
+                      setPdfViewerOpen(true);
+                    }}
                     className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
                   >
                     <svg
@@ -162,7 +164,7 @@ export default function ProfileViewModal({ userId, isOpen, onClose, onStartChat 
                       />
                     </svg>
                     View Resume
-                  </a>
+                  </button>
                 </div>
               )}
 
@@ -188,6 +190,14 @@ export default function ProfileViewModal({ userId, isOpen, onClose, onStartChat 
           )}
         </div>
       </div>
+      
+      {/* PDF Viewer Modal */}
+      <PDFViewerModal
+        isOpen={pdfViewerOpen}
+        onClose={() => setPdfViewerOpen(false)}
+        pdfUrl={pdfViewerUrl}
+        filename={user?.resumeUrl ? user.resumeUrl.split('/').pop() || 'Resume' : 'Resume'}
+      />
     </div>
   );
 }

@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '../hooks/useToast';
-import api from '../utils/api';
+import api, { getFileUrl } from '../utils/api';
 import ProfileViewModal from '../components/ProfileViewModal';
 import ChatModal from '../components/ChatModal';
+import PDFViewerModal from '../components/PDFViewerModal';
+import { DashboardStatsSkeleton } from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import StatusBadge from '../components/StatusBadge';
 
 interface Idea {
   _id: string;
@@ -51,6 +55,8 @@ export default function DashboardPage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string | null>(null);
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [pdfViewerUrl, setPdfViewerUrl] = useState<string>('');
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatType, setChatType] = useState<'personal' | 'group'>('personal');
   const [chatUserId, setChatUserId] = useState<string | null>(null);
@@ -135,10 +141,13 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+      <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+        <div className="container mx-auto px-4">
+          <div className="mb-6">
+            <div className="h-8 bg-gray-200 rounded w-64 mb-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-48 animate-pulse"></div>
+          </div>
+          <DashboardStatsSkeleton />
         </div>
       </div>
     );
@@ -164,43 +173,43 @@ export default function DashboardPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl shadow-md p-4 sm:p-6 border border-indigo-200 hover:shadow-lg transition-all transform hover:scale-105">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-xs sm:text-sm">My Ideas</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{myIdeas.length}</p>
+                <p className="text-indigo-700 text-xs sm:text-sm font-medium mb-1">My Ideas</p>
+                <p className="text-2xl sm:text-3xl font-bold text-indigo-900">{myIdeas.length}</p>
               </div>
-              <div className="text-2xl sm:text-4xl">💡</div>
+              <div className="text-3xl sm:text-4xl">💡</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-md p-4 sm:p-6 border border-purple-200 hover:shadow-lg transition-all transform hover:scale-105">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-xs sm:text-sm">Collaborated Ideas</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{totalCollaboratedIdeas}</p>
+                <p className="text-purple-700 text-xs sm:text-sm font-medium mb-1">Collaborated Ideas</p>
+                <p className="text-2xl sm:text-3xl font-bold text-purple-900">{totalCollaboratedIdeas}</p>
               </div>
-              <div className="text-2xl sm:text-4xl">🤝</div>
+              <div className="text-3xl sm:text-4xl">🤝</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl shadow-md p-4 sm:p-6 border border-yellow-200 hover:shadow-lg transition-all transform hover:scale-105">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-xs sm:text-sm">Active Ideas</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{activeIdeas}</p>
+                <p className="text-yellow-700 text-xs sm:text-sm font-medium mb-1">Active Ideas</p>
+                <p className="text-2xl sm:text-3xl font-bold text-yellow-900">{activeIdeas}</p>
               </div>
-              <div className="text-2xl sm:text-4xl">🚀</div>
+              <div className="text-3xl sm:text-4xl">🚀</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-md p-4 sm:p-6 border border-green-200 hover:shadow-lg transition-all transform hover:scale-105">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-xs sm:text-sm">Collaborators</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{totalCollaborators}</p>
+                <p className="text-green-700 text-xs sm:text-sm font-medium mb-1">Collaborators</p>
+                <p className="text-2xl sm:text-3xl font-bold text-green-900">{totalCollaborators}</p>
               </div>
-              <div className="text-2xl sm:text-4xl">👥</div>
+              <div className="text-3xl sm:text-4xl">👥</div>
             </div>
           </div>
         </div>
@@ -227,15 +236,15 @@ export default function DashboardPage() {
             </div>
 
             {myIdeas.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">You haven't posted any ideas yet.</p>
-                <a
-                  href="/ideas"
-                  className="mt-2 text-indigo-600 hover:text-indigo-700 text-sm"
-                >
-                  Browse ideas →
-                </a>
-              </div>
+              <EmptyState
+                icon="💡"
+                title="No Ideas Yet"
+                description="You haven't posted any ideas yet. Start sharing your ideas with the community!"
+                action={{
+                  label: 'Create Your First Idea',
+                  onClick: () => (window.location.href = '/ideas'),
+                }}
+              />
             ) : (
               <div className="space-y-4">
                 {myIdeas.slice(0, 5).map((idea) => (
@@ -299,9 +308,11 @@ export default function DashboardPage() {
             </div>
 
             {collabRequests.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No collaboration requests yet.</p>
-              </div>
+              <EmptyState
+                icon="🤝"
+                title="No Collaboration Requests"
+                description="You haven't received any collaboration requests yet. Share your ideas to get started!"
+              />
             ) : (
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {collabRequests.map((request) => (
@@ -333,12 +344,11 @@ export default function DashboardPage() {
                     <p className="text-sm text-gray-700 mb-3">{request.message}</p>
                     {request.resumeUrl && (
                       <div className="mb-3">
-                        <a
-                          href={request.resumeUrl.startsWith('http') 
-                            ? request.resumeUrl 
-                            : `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}${request.resumeUrl.startsWith('/') ? request.resumeUrl : '/' + request.resumeUrl}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={() => {
+                            setPdfViewerUrl(getFileUrl(request.resumeUrl!));
+                            setPdfViewerOpen(true);
+                          }}
                           className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700"
                         >
                           <svg
@@ -355,7 +365,7 @@ export default function DashboardPage() {
                             />
                           </svg>
                           View Resume
-                        </a>
+                        </button>
                       </div>
                     )}
                     {request.status === 'pending' && (
@@ -565,6 +575,14 @@ export default function DashboardPage() {
         userId={chatUserId || undefined}
         otherUserName={selectedUserName || undefined}
         ideaTitle={chatIdeaTitle || undefined}
+      />
+      
+      {/* PDF Viewer Modal */}
+      <PDFViewerModal
+        isOpen={pdfViewerOpen}
+        onClose={() => setPdfViewerOpen(false)}
+        pdfUrl={pdfViewerUrl}
+        filename={pdfViewerUrl.split('/').pop() || 'Resume'}
       />
     </div>
   );

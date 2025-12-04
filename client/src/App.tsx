@@ -8,6 +8,7 @@ import TermsPage from './pages/TermsPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ChatListPage from './pages/ChatListPage';
+import HomePage from './pages/HomePage';
 
 function App() {
   return (
@@ -15,39 +16,7 @@ function App() {
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <Routes>
-          <Route
-            path="/"
-            element={
-              <div className="container mx-auto px-4 py-8">
-                <div className="max-w-4xl mx-auto text-center">
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-                    IdeaConnect
-                  </h1>
-                  <p className="text-lg sm:text-xl text-gray-600 mb-6 sm:mb-8">
-                    Connect, Collaborate, Create
-                  </p>
-                  <p className="text-sm sm:text-base text-gray-500 mb-6 sm:mb-8 px-4">
-                    A platform where people with similar ideas can discover each other, 
-                    share ideas, form teams, and collaborate in a workspace with basic legal/IP awareness.
-                  </p>
-                  <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 px-4">
-                    <Link
-                      to="/login"
-                      className="px-6 py-3 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700 transition-colors text-center"
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      to="/register"
-                      className="px-6 py-3 bg-gray-200 text-gray-700 rounded-md font-medium hover:bg-gray-300 transition-colors text-center"
-                    >
-                      Get Started
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            }
-          />
+          <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />

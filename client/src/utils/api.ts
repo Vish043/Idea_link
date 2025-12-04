@@ -31,5 +31,34 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * Construct a file URL from a stored URL
+ * Handles both relative paths and full URLs, preventing double /api/api/ issues
+ */
+export function getFileUrl(storedUrl: string | undefined | null): string {
+  if (!storedUrl) return '';
+  
+  // If it's already a full URL (cloud storage), return as is
+  if (storedUrl.startsWith('http://') || storedUrl.startsWith('https://')) {
+    return storedUrl;
+  }
+  
+  // Remove any leading /api if present to prevent double /api/api/
+  let cleanUrl = storedUrl;
+  if (cleanUrl.startsWith('/api/')) {
+    cleanUrl = cleanUrl.substring(4); // Remove '/api' but keep the leading '/'
+  }
+  
+  // Ensure it starts with /
+  if (!cleanUrl.startsWith('/')) {
+    cleanUrl = '/' + cleanUrl;
+  }
+  
+  // Construct full URL
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  
+  return `${baseUrl}${cleanUrl}`;
+}
+
 export default api;
 
