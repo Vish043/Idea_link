@@ -6,7 +6,6 @@ import ChatModal from '../components/ChatModal';
 import PDFViewerModal from '../components/PDFViewerModal';
 import { DashboardStatsSkeleton } from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
-import StatusBadge from '../components/StatusBadge';
 
 interface Idea {
   _id: string;
