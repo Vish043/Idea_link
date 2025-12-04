@@ -10,6 +10,26 @@ export interface IIdea extends Document {
   visibility: 'public' | 'summary_with_protected_details';
   status: 'looking_for_collaborators' | 'in_progress' | 'completed';
   collaborators: Types.ObjectId[];
+  // IP Protection & Trust
+  ideaHash: string; // Cryptographic hash for IP proof
+  versionHistory: Array<{
+    version: number;
+    content: string;
+    timestamp: Date;
+    changedBy: Types.ObjectId;
+  }>;
+  locked: boolean; // Lock idea from further edits
+  // Rating & Feedback
+  averageRating: number;
+  totalRatings: number;
+  ratings: Array<{
+    userId: Types.ObjectId;
+    rating: number;
+    comment?: string;
+    createdAt: Date;
+  }>;
+  // Matching & Discovery
+  matchScore?: number; // For recommendation algorithm
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,6 +77,54 @@ const IdeaSchema = new Schema<IIdea>(
       type: [Schema.Types.ObjectId],
       ref: 'User',
       default: [],
+    },
+    // IP Protection & Trust
+    ideaHash: {
+      type: String,
+      default: '',
+    },
+    versionHistory: {
+      type: [
+        {
+          version: Number,
+          content: String,
+          timestamp: Date,
+          changedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+        },
+      ],
+      default: [],
+    },
+    locked: {
+      type: Boolean,
+      default: false,
+    },
+    // Rating & Feedback
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    totalRatings: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    ratings: {
+      type: [
+        {
+          userId: { type: Schema.Types.ObjectId, ref: 'User' },
+          rating: { type: Number, min: 1, max: 5 },
+          comment: String,
+          createdAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
+    // Matching & Discovery
+    matchScore: {
+      type: Number,
+      default: 0,
     },
   },
   {

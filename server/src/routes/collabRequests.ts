@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { CollaborationRequest } from '../models/CollaborationRequest';
 import { Idea } from '../models/Idea';
+import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import { createError } from '../middleware/errorHandler';
 import { validateObjectId } from '../utils/validation';
@@ -152,7 +153,7 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response, next: N
     collabRequest.status = status;
     await collabRequest.save();
 
-    // If accepted, add sender to idea collaborators
+    // If accepted, add sender to idea collaborators and update metrics
     if (status === 'accepted') {
       const ideaDoc = await Idea.findById(idea._id);
       if (ideaDoc) {
@@ -160,6 +161,11 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response, next: N
         if (!ideaDoc.collaborators.some((id) => id.toString() === senderId)) {
           ideaDoc.collaborators.push(collabRequest.sender);
           await ideaDoc.save();
+          
+          // Increment completed collaborations for the sender
+          await User.findByIdAndUpdate(senderId, {
+            $inc: { completedCollaborations: 1 },
+          });
         }
       }
     }

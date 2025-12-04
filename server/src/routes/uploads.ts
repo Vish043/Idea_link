@@ -8,7 +8,7 @@ import { uploadFile } from '../utils/storage';
 
 const router = express.Router();
 
-// POST /api/uploads/resume - Upload a resume file
+// POST /api/uploads/resume - Upload a resume file (keep singular for consistency with frontend)
 router.post('/resume', authMiddleware, (req: Request, res: Response, next: NextFunction) => {
   singleResumeUpload(req, res, async (err: any) => {
     if (err) {
@@ -66,8 +66,8 @@ router.post('/avatar', authMiddleware, (req: Request, res: Response, next: NextF
   });
 });
 
-// GET /api/uploads/resume/:filename - Download/view a resume file
-router.get('/resume/:filename', authMiddleware, (req: Request, res: Response, next: NextFunction) => {
+// Shared handler function for serving resume files
+const serveResumeFile = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { filename } = req.params;
     const filePath = path.join(process.cwd(), 'uploads', 'resumes', filename);
@@ -93,8 +93,23 @@ router.get('/resume/:filename', authMiddleware, (req: Request, res: Response, ne
         ? 'application/msword'
         : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
+    // Get file stats for Content-Length header
+    const stats = fs.statSync(filePath);
+    
+    // Set headers to display PDF inline in browser
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    
+    // For PDFs, use inline without filename to prevent download
+    // For other files, include filename for proper download
+    if (ext === '.pdf') {
+      res.setHeader('Content-Disposition', 'inline');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    } else {
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
+    }
 
     // Stream the file
     const fileStream = fs.createReadStream(filePath);
@@ -102,7 +117,13 @@ router.get('/resume/:filename', authMiddleware, (req: Request, res: Response, ne
   } catch (error) {
     next(error);
   }
-});
+};
+
+// GET /api/uploads/resume/:filename - Download/view a resume file (singular, for backward compatibility)
+router.get('/resume/:filename', authMiddleware, serveResumeFile);
+
+// GET /api/uploads/resumes/:filename - Download/view a resume file (plural, matches folder structure)
+router.get('/resumes/:filename', authMiddleware, serveResumeFile);
 
 // GET /api/uploads/avatar/:filename - View an avatar image
 router.get('/avatar/:filename', authMiddleware, (req: Request, res: Response, next: NextFunction) => {

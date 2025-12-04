@@ -15,6 +15,8 @@ import ndaRoutes from './routes/nda';
 import taskRoutes from './routes/tasks';
 import messageRoutes from './routes/messages';
 import uploadRoutes from './routes/uploads';
+import ratingRoutes from './routes/ratings';
+import matchingRoutes from './routes/matching';
 
 dotenv.config();
 
@@ -33,35 +35,13 @@ connectDatabase();
 // Middleware
 app.use(cors());
 app.use(express.json());
-// Serve uploaded files statically (for direct file access)
-app.use('/api/uploads', express.static('uploads', {
-  setHeaders: (res, filepath) => {
-    // Set appropriate content type based on file extension
-    if (filepath.endsWith('.pdf')) {
-      res.setHeader('Content-Type', 'application/pdf');
-    } else if (filepath.endsWith('.doc')) {
-      res.setHeader('Content-Type', 'application/msword');
-    } else if (filepath.endsWith('.docx')) {
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    } else if (filepath.match(/\.(jpg|jpeg)$/i)) {
-      res.setHeader('Content-Type', 'image/jpeg');
-    } else if (filepath.endsWith('.png')) {
-      res.setHeader('Content-Type', 'image/png');
-    } else if (filepath.endsWith('.gif')) {
-      res.setHeader('Content-Type', 'image/gif');
-    } else if (filepath.endsWith('.webp')) {
-      res.setHeader('Content-Type', 'image/webp');
-    }
-    res.setHeader('Content-Disposition', 'inline');
-  }
-}));
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'IdeaConnect API is running' });
 });
 
-// API Routes
+// API Routes (register upload routes before static file server to handle route handlers first)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ideas', ideaRoutes);
@@ -70,6 +50,39 @@ app.use('/api/nda', ndaRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/ratings', ratingRoutes);
+app.use('/api/matching', matchingRoutes);
+
+// Serve uploaded files statically (for direct file access, after route handlers)
+// This will handle files that don't match route patterns
+app.use('/api/uploads', express.static('uploads', {
+  setHeaders: (res, filepath) => {
+    // Set appropriate content type based on file extension
+    if (filepath.endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    } else if (filepath.endsWith('.doc')) {
+      res.setHeader('Content-Type', 'application/msword');
+      res.setHeader('Content-Disposition', 'inline');
+    } else if (filepath.endsWith('.docx')) {
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', 'inline');
+    } else if (filepath.match(/\.(jpg|jpeg)$/i)) {
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Content-Disposition', 'inline');
+    } else if (filepath.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Content-Disposition', 'inline');
+    } else if (filepath.endsWith('.gif')) {
+      res.setHeader('Content-Type', 'image/gif');
+      res.setHeader('Content-Disposition', 'inline');
+    } else if (filepath.endsWith('.webp')) {
+      res.setHeader('Content-Type', 'image/webp');
+      res.setHeader('Content-Disposition', 'inline');
+    }
+  }
+}));
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

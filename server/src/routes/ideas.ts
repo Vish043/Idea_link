@@ -4,6 +4,7 @@ import { NdaAgreement } from '../models/NdaAgreement';
 import { authMiddleware, verifyToken } from '../middleware/auth';
 import { createError } from '../middleware/errorHandler';
 import { validateObjectId } from '../utils/validation';
+import { generateIdeaHash, createVersionEntry } from '../utils/ipProtection';
 
 const router = express.Router();
 
@@ -28,6 +29,11 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
       throw createError('Invalid status value', 400);
     }
 
+    const now = new Date();
+    
+    // Generate IP protection hash
+    const ideaHash = generateIdeaHash(title, description, req.user._id.toString(), now);
+
     const idea = new Idea({
       owner: req.user._id,
       title,
@@ -37,6 +43,10 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
       requiredSkills: requiredSkills || [],
       visibility: visibility || 'public',
       status: status || 'looking_for_collaborators',
+      ideaHash,
+      versionHistory: [
+        createVersionEntry(description, req.user._id.toString(), 1),
+      ],
     });
 
     await idea.save();
