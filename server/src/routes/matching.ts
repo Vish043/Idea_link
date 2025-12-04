@@ -14,6 +14,10 @@ router.get(
   authMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      if (!req.user) {
+        throw createError('User not found', 404);
+      }
+
       const { ideaId } = req.params;
       validateObjectId(ideaId, 'Idea ID');
 
@@ -65,6 +69,10 @@ router.get(
   authMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      if (!req.user) {
+        throw createError('User not found', 404);
+      }
+
       const user = await User.findById(req.user._id);
       if (!user) {
         throw createError('User not found', 404);

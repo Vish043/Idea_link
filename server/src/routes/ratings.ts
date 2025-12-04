@@ -11,6 +11,10 @@ const router = express.Router();
 // POST /api/ratings - Rate a user after collaboration
 router.post('/', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (!req.user) {
+      throw createError('User not found', 404);
+    }
+
     const { ratedUserId, collaborationId, rating, comment, categories } = req.body;
 
     if (!ratedUserId || !rating) {
@@ -92,6 +96,10 @@ router.get('/user/:userId', async (req: Request, res: Response, next: NextFuncti
 // POST /api/ratings/idea/:ideaId - Rate an idea
 router.post('/idea/:ideaId', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (!req.user) {
+      throw createError('User not found', 404);
+    }
+
     const { ideaId } = req.params;
     const { rating, comment } = req.body;
 
