@@ -100,6 +100,7 @@ router.post('/idea/:ideaId', authMiddleware, async (req: Request, res: Response,
       throw createError('User not found', 404);
     }
 
+    const currentUser = req.user; // Store for TypeScript type narrowing
     const { ideaId } = req.params;
     const { rating, comment } = req.body;
 
@@ -116,7 +117,7 @@ router.post('/idea/:ideaId', authMiddleware, async (req: Request, res: Response,
 
     // Check if user already rated this idea
     const existingRating = idea.ratings.find(
-      (r) => r.userId.toString() === req.user._id.toString()
+      (r) => r.userId.toString() === currentUser._id.toString()
     );
 
     if (existingRating) {
@@ -125,7 +126,7 @@ router.post('/idea/:ideaId', authMiddleware, async (req: Request, res: Response,
 
     // Add rating
     idea.ratings.push({
-      userId: req.user._id,
+      userId: currentUser._id,
       rating,
       comment: comment || undefined,
       createdAt: new Date(),
