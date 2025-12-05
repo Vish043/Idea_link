@@ -115,6 +115,27 @@ router.get('/mine', authMiddleware, async (req: Request, res: Response, next: Ne
   }
 });
 
+// GET /api/collab-requests/sent
+router.get('/sent', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw createError('User not found', 404);
+    }
+
+    // Get requests sent by the user
+    const requests = await CollaborationRequest.find({
+      sender: req.user._id,
+    })
+      .populate('idea', 'title shortSummary owner')
+      .populate('idea.owner', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json(requests);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // PATCH /api/collab-requests/:id
 router.patch('/:id', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -174,6 +195,41 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response, next: N
     await collabRequest.populate('sender', 'name email avatarUrl');
 
     res.json(collabRequest);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/collab-requests/:id
+router.delete('/:id', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw createError('User not found', 404);
+    }
+
+    const { id } = req.params;
+    validateObjectId(id, 'Request ID');
+
+    const collabRequest = await CollaborationRequest.findById(id);
+
+    if (!collabRequest) {
+      throw createError('Collaboration request not found', 404);
+    }
+
+    // Check if user is the sender of the request
+    if (collabRequest.sender.toString() !== req.user._id.toString()) {
+      throw createError('Only the sender can cancel their own request', 403);
+    }
+
+    // Only allow cancellation of pending requests
+    if (collabRequest.status !== 'pending') {
+      throw createError('Only pending requests can be cancelled', 400);
+    }
+
+    // Delete the request
+    await CollaborationRequest.findByIdAndDelete(id);
+
+    res.json({ message: 'Collaboration request cancelled successfully' });
   } catch (error) {
     next(error);
   }
