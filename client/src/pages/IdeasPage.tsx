@@ -45,6 +45,10 @@ export default function IdeasPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'my-ideas'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
   const { showError, showSuccess } = useToast();
 
   const [formData, setFormData] = useState({
@@ -94,6 +98,10 @@ export default function IdeasPage() {
       setLoading(false);
     }
   };
+
+  // Get unique tags and skills from all ideas
+  const allTags = Array.from(new Set(ideas.flatMap((idea) => idea.tags))).sort();
+  const allSkills = Array.from(new Set(ideas.flatMap((idea) => idea.requiredSkills))).sort();
 
   const handleAddTag = () => {
     if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
@@ -357,8 +365,182 @@ export default function IdeasPage() {
             >
               Refresh
             </button>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-3 sm:px-4 py-2 rounded-md transition-colors text-sm sm:text-base flex-1 sm:flex-none ${
+                showFilters || statusFilter !== 'all' || selectedTags.length > 0 || selectedSkills.length > 0
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {showFilters ? 'Hide Filters' : 'Filters'}
+              {(statusFilter !== 'all' || selectedTags.length > 0 || selectedSkills.length > 0) && (
+                <span className="ml-1 bg-white text-indigo-600 rounded-full px-1.5 py-0.5 text-xs">
+                  {[statusFilter !== 'all' ? 1 : 0, selectedTags.length, selectedSkills.length].reduce((a, b) => a + b, 0)}
+                </span>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Filter Panel */}
+        {showFilters && (
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+              <button
+                onClick={() => {
+                  setStatusFilter('all');
+                  setSelectedTags([]);
+                  setSelectedSkills([]);
+                }}
+                className="text-sm text-indigo-600 hover:text-indigo-700"
+              >
+                Clear All
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Status Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="looking_for_collaborators">Looking for Collaborators</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+
+              {/* Tags Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tags
+                </label>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Type to filter by tags..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                        const tag = e.currentTarget.value.trim();
+                        if (!selectedTags.includes(tag)) {
+                          setSelectedTags([...selectedTags, tag]);
+                        }
+                        e.currentTarget.value = '';
+                      }
+                    }}
+                  />
+                  {allTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                      {allTags
+                        .filter((tag) => !selectedTags.includes(tag))
+                        .slice(0, 10)
+                        .map((tag) => (
+                          <button
+                            key={tag}
+                            onClick={() => {
+                              if (!selectedTags.includes(tag)) {
+                                setSelectedTags([...selectedTags, tag]);
+                              }
+                            }}
+                            className="px-2 py-1 text-xs rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                          >
+                            + {tag}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                  {selectedTags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                        >
+                          {tag}
+                          <button
+                            onClick={() => setSelectedTags(selectedTags.filter((t) => t !== tag))}
+                            className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-indigo-400 hover:bg-indigo-200 hover:text-indigo-500"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Required Skills Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Required Skills
+                </label>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Type to filter by skills..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                        const skill = e.currentTarget.value.trim();
+                        if (!selectedSkills.includes(skill)) {
+                          setSelectedSkills([...selectedSkills, skill]);
+                        }
+                        e.currentTarget.value = '';
+                      }
+                    }}
+                  />
+                  {allSkills.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                      {allSkills
+                        .filter((skill) => !selectedSkills.includes(skill))
+                        .slice(0, 10)
+                        .map((skill) => (
+                          <button
+                            key={skill}
+                            onClick={() => {
+                              if (!selectedSkills.includes(skill)) {
+                                setSelectedSkills([...selectedSkills, skill]);
+                              }
+                            }}
+                            className="px-2 py-1 text-xs rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                          >
+                            + {skill}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                  {selectedSkills.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSkills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                        >
+                          {skill}
+                          <button
+                            onClick={() => setSelectedSkills(selectedSkills.filter((s) => s !== skill))}
+                            className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-green-400 hover:bg-green-200 hover:text-green-500"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {ideas.length === 0 ? (
           <EmptyState
@@ -385,6 +567,24 @@ export default function IdeasPage() {
                 // Filter by my ideas
                 if (filter === 'my-ideas' && currentUser) {
                   if (idea.owner._id !== currentUser.id) return false;
+                }
+                // Filter by status
+                if (statusFilter !== 'all') {
+                  if (idea.status !== statusFilter) return false;
+                }
+                // Filter by tags
+                if (selectedTags.length > 0) {
+                  const hasMatchingTag = selectedTags.some((tag) =>
+                    idea.tags.some((ideaTag) => ideaTag.toLowerCase() === tag.toLowerCase())
+                  );
+                  if (!hasMatchingTag) return false;
+                }
+                // Filter by required skills
+                if (selectedSkills.length > 0) {
+                  const hasMatchingSkill = selectedSkills.some((skill) =>
+                    idea.requiredSkills.some((ideaSkill) => ideaSkill.toLowerCase() === skill.toLowerCase())
+                  );
+                  if (!hasMatchingSkill) return false;
                 }
                 // Filter by search query
                 if (searchQuery.trim()) {

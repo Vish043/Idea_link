@@ -23,6 +23,10 @@ interface CollaborationRequest {
     _id: string;
     title: string;
     shortSummary: string;
+    owner?: {
+      _id: string;
+      name: string;
+    };
   };
   sender: {
     _id: string;
@@ -50,7 +54,9 @@ export default function DashboardPage() {
   const [myIdeas, setMyIdeas] = useState<Idea[]>([]);
   const [collaboratedIdeas, setCollaboratedIdeas] = useState<Idea[]>([]);
   const [collabRequests, setCollabRequests] = useState<CollaborationRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<CollaborationRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string | null>(null);
@@ -98,9 +104,13 @@ export default function DashboardPage() {
       );
       setCollaboratedIdeas(collabIdeas);
 
-      // Fetch collaboration requests
+      // Fetch collaboration requests (received)
       const requestsResponse = await api.get('/collab-requests/mine');
       setCollabRequests(requestsResponse.data);
+
+      // Fetch collaboration requests (sent)
+      const sentRequestsResponse = await api.get('/collab-requests/sent');
+      setSentRequests(sentRequestsResponse.data);
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || 'Failed to load dashboard';
       showError(errorMessage);
@@ -117,6 +127,24 @@ export default function DashboardPage() {
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || 'Failed to update request';
       showError(errorMessage);
+    }
+  };
+
+  const handleCancelRequest = async (requestId: string) => {
+    if (!window.confirm('Are you sure you want to cancel this collaboration request? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setCancellingRequestId(requestId);
+      await api.delete(`/collab-requests/${requestId}`);
+      showSuccess('Collaboration request cancelled successfully');
+      fetchDashboardData();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Failed to cancel request';
+      showError(errorMessage);
+    } finally {
+      setCancellingRequestId(null);
     }
   };
 
@@ -418,6 +446,86 @@ export default function DashboardPage() {
             )}
           </div>
 
+          {/* Sent Requests Section */}
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                Sent Requests
+              </h2>
+              <button
+                onClick={fetchDashboardData}
+                className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-700"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {sentRequests.length === 0 ? (
+              <EmptyState
+                icon="📤"
+                title="No Sent Requests"
+                description="You haven't sent any collaboration requests yet. Browse ideas and send requests to collaborate!"
+              />
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {sentRequests.map((request) => (
+                  <div
+                    key={request._id}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">
+                          {request.idea.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          To: {(request.idea as any).owner?.name || 'Unknown'}
+                        </p>
+                      </div>
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          request.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : request.status === 'accepted'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {request.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700 mb-3">{request.message}</p>
+                    {request.status === 'pending' && (
+                      <button
+                        onClick={() => handleCancelRequest(request._id)}
+                        disabled={cancellingRequestId === request._id}
+                        className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        {cancellingRequestId === request._id ? 'Cancelling...' : 'Cancel Request'}
+                      </button>
+                    )}
+                    {request.status === 'accepted' && (
+                      <div className="text-sm text-green-600 font-medium">
+                        ✓ Request accepted
+                      </div>
+                    )}
+                    {request.status === 'rejected' && (
+                      <div className="text-sm text-red-600 font-medium">
+                        ✗ Request rejected
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">
+                      Sent on {new Date(request.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Collaborated Ideas and My Ideas - Group Chats Side by Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
           {/* Collaborated Ideas Section */}
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex justify-between items-center mb-4">
@@ -489,58 +597,65 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-        </div>
 
-        {/* My Ideas with Group Chat */}
-        {myIdeas.length > 0 && (
-          <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow-md p-4 sm:p-6">
+          {/* My Ideas with Group Chat */}
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">My Ideas - Group Chats</h2>
-            <div className="space-y-4">
-              {myIdeas
-                .filter((idea) => idea.collaborators.length > 0 || idea.status !== 'completed')
-                .map((idea) => (
-                  <div
-                    key={idea._id}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">{idea.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {idea.collaborators.length} collaborator(s)
-                        </p>
+            {myIdeas.filter((idea) => idea.collaborators.length > 0 || idea.status !== 'completed').length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No active group chats available.</p>
+                <p className="text-gray-400 text-sm mt-2">
+                  Group chats will appear here when you have ideas with collaborators or active ideas.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {myIdeas
+                  .filter((idea) => idea.collaborators.length > 0 || idea.status !== 'completed')
+                  .map((idea) => (
+                    <div
+                      key={idea._id}
+                      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">{idea.title}</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {idea.collaborators.length} collaborator(s)
+                          </p>
+                        </div>
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            idea.status === 'looking_for_collaborators'
+                              ? 'bg-blue-100 text-blue-800'
+                              : idea.status === 'in_progress'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-green-100 text-green-800'
+                          }`}
+                        >
+                          {idea.status.replace('_', ' ')}
+                        </span>
                       </div>
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          idea.status === 'looking_for_collaborators'
-                            ? 'bg-blue-100 text-blue-800'
-                            : idea.status === 'in_progress'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}
-                      >
-                        {idea.status.replace('_', ' ')}
-                      </span>
+                      {(idea.collaborators.length > 0 || idea.status !== 'completed') && (
+                        <button
+                          onClick={() => {
+                            setChatType('group');
+                            setChatIdeaId(idea._id);
+                            setChatUserId(null);
+                            setChatIdeaTitle(idea.title);
+                            setShowChatModal(true);
+                          }}
+                          className="w-full mt-2 px-3 py-2.5 sm:py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors min-h-[44px] sm:min-h-0"
+                        >
+                          Open Group Chat
+                        </button>
+                      )}
                     </div>
-                    {(idea.collaborators.length > 0 || idea.status !== 'completed') && (
-                      <button
-                        onClick={() => {
-                          setChatType('group');
-                          setChatIdeaId(idea._id);
-                          setChatUserId(null);
-                          setChatIdeaTitle(idea.title);
-                          setShowChatModal(true);
-                        }}
-                        className="w-full mt-2 px-3 py-2.5 sm:py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors min-h-[44px] sm:min-h-0"
-                      >
-                        Open Group Chat
-                      </button>
-                    )}
-                  </div>
-                ))}
-            </div>
+                  ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Profile View Modal */}
