@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '../hooks/useToast';
-import api from '../utils/api';
+import api, { getFileUrl } from '../utils/api';
 import StatusBadge from '../components/StatusBadge';
 import EmptyState from '../components/EmptyState';
 import { IdeaCardSkeleton } from '../components/LoadingSkeleton';
@@ -12,6 +12,8 @@ interface Idea {
   description: string;
   tags: string[];
   requiredSkills: string[];
+  images?: string[];
+  videos?: string[];
   visibility: 'public' | 'summary_with_protected_details';
   status: 'looking_for_collaborators' | 'in_progress' | 'completed';
   owner: {
@@ -63,6 +65,10 @@ export default function IdeasPage() {
 
   const [tagInput, setTagInput] = useState('');
   const [skillInput, setSkillInput] = useState('');
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [selectedVideos, setSelectedVideos] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [videoPreviews, setVideoPreviews] = useState<string[]>([]);
 
   useEffect(() => {
     // Check authentication and get user
@@ -137,6 +143,52 @@ export default function IdeasPage() {
     }));
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + selectedImages.length > 10) {
+      showError('Maximum 10 images allowed');
+      return;
+    }
+    setSelectedImages([...selectedImages, ...files]);
+    
+    // Create previews
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviews((prev) => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + selectedVideos.length > 5) {
+      showError('Maximum 5 videos allowed');
+      return;
+    }
+    setSelectedVideos([...selectedVideos, ...files]);
+    
+    // Create previews
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVideoPreviews((prev) => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages(selectedImages.filter((_, i) => i !== index));
+    setImagePreviews(imagePreviews.filter((_, i) => i !== index));
+  };
+
+  const removeVideo = (index: number) => {
+    setSelectedVideos(selectedVideos.filter((_, i) => i !== index));
+    setVideoPreviews(videoPreviews.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -147,7 +199,46 @@ export default function IdeasPage() {
 
     try {
       setSubmitting(true);
-      await api.post('/ideas', formData);
+      
+      // Create FormData for file uploads
+      const submitData = new FormData();
+      submitData.append('title', formData.title);
+      submitData.append('shortSummary', formData.shortSummary);
+      submitData.append('description', formData.description);
+      submitData.append('visibility', formData.visibility);
+      submitData.append('status', formData.status);
+      
+      formData.tags.forEach((tag) => {
+        submitData.append('tags', tag);
+      });
+      
+      formData.requiredSkills.forEach((skill) => {
+        submitData.append('requiredSkills', skill);
+      });
+      
+      selectedImages.forEach((image) => {
+        submitData.append('images', image);
+      });
+      
+      selectedVideos.forEach((video) => {
+        submitData.append('videos', video);
+      });
+
+      // Use axios directly for FormData (api instance sets JSON header)
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/ideas`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: submitData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create idea');
+      }
+
       showSuccess('Idea created successfully!');
       setShowCreateModal(false);
       setFormData({
@@ -159,9 +250,13 @@ export default function IdeasPage() {
         visibility: 'public',
         status: 'looking_for_collaborators',
       });
+      setSelectedImages([]);
+      setSelectedVideos([]);
+      setImagePreviews([]);
+      setVideoPreviews([]);
       fetchIdeas();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || 'Failed to create idea';
+      const errorMessage = err.message || 'Failed to create idea';
       showError(errorMessage);
     } finally {
       setSubmitting(false);
@@ -181,6 +276,10 @@ export default function IdeasPage() {
     });
     setTagInput('');
     setSkillInput('');
+    setSelectedImages([]);
+    setSelectedVideos([]);
+    setImagePreviews([]);
+    setVideoPreviews([]);
   };
 
   const handleViewIdea = async (ideaId: string) => {
@@ -722,6 +821,80 @@ export default function IdeasPage() {
                     />
                   </div>
 
+                  {/* Images Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Images (Optional, max 10)
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Supported formats: JPEG, PNG, GIF, WebP (max 10MB per image)
+                    </p>
+                    {imagePreviews.length > 0 && (
+                      <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {imagePreviews.map((preview, idx) => (
+                          <div key={idx} className="relative group">
+                            <img
+                              src={preview}
+                              alt={`Preview ${idx + 1}`}
+                              className="w-full h-32 object-cover rounded-md border border-gray-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(idx)}
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Videos Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Videos (Optional, max 5)
+                    </label>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      multiple
+                      onChange={handleVideoChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Supported formats: MP4, MPEG, MOV, AVI, WebM (max 100MB per video)
+                    </p>
+                    {videoPreviews.length > 0 && (
+                      <div className="mt-3 space-y-3">
+                        {videoPreviews.map((preview, idx) => (
+                          <div key={idx} className="relative group">
+                            <video
+                              src={preview}
+                              controls
+                              className="w-full h-48 rounded-md border border-gray-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeVideo(idx)}
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Tags */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -906,6 +1079,43 @@ export default function IdeasPage() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
                     <p className="text-gray-700 whitespace-pre-wrap">{selectedIdea.description}</p>
                   </div>
+
+                  {/* Images */}
+                  {selectedIdea.images && selectedIdea.images.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Images</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {selectedIdea.images.map((imageUrl, idx) => (
+                          <div key={idx} className="relative">
+                            <img
+                              src={getFileUrl(imageUrl)}
+                              alt={`Idea image ${idx + 1}`}
+                              className="w-full h-auto rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => window.open(getFileUrl(imageUrl), '_blank')}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Videos */}
+                  {selectedIdea.videos && selectedIdea.videos.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Videos</h3>
+                      <div className="space-y-4">
+                        {selectedIdea.videos.map((videoUrl, idx) => (
+                          <div key={idx} className="relative">
+                            <video
+                              src={getFileUrl(videoUrl)}
+                              controls
+                              className="w-full h-auto rounded-lg border border-gray-200"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Tags */}
                   {selectedIdea.tags.length > 0 && (
