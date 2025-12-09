@@ -82,6 +82,21 @@ app.use('/api/uploads', express.static('uploads', {
     } else if (filepath.endsWith('.webp')) {
       res.setHeader('Content-Type', 'image/webp');
       res.setHeader('Content-Disposition', 'inline');
+    } else if (filepath.endsWith('.mp4')) {
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Content-Disposition', 'inline');
+    } else if (filepath.endsWith('.mpeg') || filepath.endsWith('.mpg')) {
+      res.setHeader('Content-Type', 'video/mpeg');
+      res.setHeader('Content-Disposition', 'inline');
+    } else if (filepath.endsWith('.mov')) {
+      res.setHeader('Content-Type', 'video/quicktime');
+      res.setHeader('Content-Disposition', 'inline');
+    } else if (filepath.endsWith('.avi')) {
+      res.setHeader('Content-Type', 'video/x-msvideo');
+      res.setHeader('Content-Disposition', 'inline');
+    } else if (filepath.endsWith('.webm')) {
+      res.setHeader('Content-Type', 'video/webm');
+      res.setHeader('Content-Disposition', 'inline');
     }
   }
 }));

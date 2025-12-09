@@ -31,7 +31,7 @@ if (isCloudinaryConfigured) {
 /**
  * Upload file to storage (cloud or local based on configuration)
  */
-export async function uploadFile(file: Express.Multer.File, folder: 'resumes' | 'avatars' = 'resumes'): Promise<string> {
+export async function uploadFile(file: Express.Multer.File, folder: 'resumes' | 'avatars' | 'ideas' = 'resumes'): Promise<string> {
   if (USE_CLOUD_STORAGE && isCloudinaryConfigured) {
     // Upload to Cloudinary
     return uploadToCloudinary(file, folder);
@@ -44,18 +44,21 @@ export async function uploadFile(file: Express.Multer.File, folder: 'resumes' | 
 /**
  * Upload to Cloudinary
  */
-async function uploadToCloudinary(file: Express.Multer.File, folder: 'resumes' | 'avatars' = 'resumes'): Promise<string> {
+async function uploadToCloudinary(file: Express.Multer.File, folder: 'resumes' | 'avatars' | 'ideas' = 'resumes'): Promise<string> {
   return new Promise((resolve, reject) => {
     const isImage = file.mimetype.startsWith('image/');
+    const isVideo = file.mimetype.startsWith('video/');
     
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        resource_type: isImage ? 'image' : 'raw', // Images vs documents
+        resource_type: isVideo ? 'video' : (isImage ? 'image' : 'raw'), // Videos, Images, or documents
         folder: folder,
-        allowed_formats: isImage 
+        allowed_formats: isVideo
+          ? ['mp4', 'mpeg', 'mov', 'avi', 'webm']
+          : isImage 
           ? ['jpg', 'jpeg', 'png', 'gif', 'webp']
           : ['pdf', 'doc', 'docx'],
-        transformation: isImage ? [
+        transformation: isImage && folder === 'avatars' ? [
           { width: 400, height: 400, crop: 'fill', gravity: 'face' }, // Optimize avatar images
         ] : undefined,
       },
@@ -80,7 +83,7 @@ async function uploadToCloudinary(file: Express.Multer.File, folder: 'resumes' |
 /**
  * Save to local filesystem
  */
-async function saveToLocal(file: Express.Multer.File, folder: 'resumes' | 'avatars' = 'resumes'): Promise<string> {
+async function saveToLocal(file: Express.Multer.File, folder: 'resumes' | 'avatars' | 'ideas' = 'resumes'): Promise<string> {
   const uploadsDir = path.join(process.cwd(), 'uploads', folder);
   
   // Ensure directory exists

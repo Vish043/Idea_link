@@ -5,11 +5,13 @@ import { authMiddleware, verifyToken } from '../middleware/auth';
 import { createError } from '../middleware/errorHandler';
 import { validateObjectId } from '../utils/validation';
 import { generateIdeaHash, createVersionEntry } from '../utils/ipProtection';
+import { ideaMediaUpload } from '../middleware/upload';
+import { uploadFile } from '../utils/storage';
 
 const router = express.Router();
 
 // POST /api/ideas
-router.post('/', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', authMiddleware, ideaMediaUpload, async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user) {
       throw createError('User not found', 404);
@@ -34,6 +36,32 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
     // Generate IP protection hash
     const ideaHash = generateIdeaHash(title, description, req.user._id.toString(), now);
 
+    // Handle image uploads
+    const imageUrls: string[] = [];
+    if (req.files && typeof req.files === 'object' && 'images' in req.files && Array.isArray(req.files.images)) {
+      for (const file of req.files.images) {
+        try {
+          const url = await uploadFile(file, 'ideas');
+          imageUrls.push(url);
+        } catch (error: any) {
+          return next(createError(`Failed to upload image: ${error.message}`, 500));
+        }
+      }
+    }
+
+    // Handle video uploads
+    const videoUrls: string[] = [];
+    if (req.files && typeof req.files === 'object' && 'videos' in req.files && Array.isArray(req.files.videos)) {
+      for (const file of req.files.videos) {
+        try {
+          const url = await uploadFile(file, 'ideas');
+          videoUrls.push(url);
+        } catch (error: any) {
+          return next(createError(`Failed to upload video: ${error.message}`, 500));
+        }
+      }
+    }
+
     const idea = new Idea({
       owner: req.user._id,
       title,
@@ -41,6 +69,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
       description,
       tags: tags || [],
       requiredSkills: requiredSkills || [],
+      images: imageUrls,
+      videos: videoUrls,
       visibility: visibility || 'public',
       status: status || 'looking_for_collaborators',
       ideaHash,

@@ -10,6 +10,9 @@ export interface IIdea extends Document {
   visibility: 'public' | 'summary_with_protected_details';
   status: 'looking_for_collaborators' | 'in_progress' | 'completed';
   collaborators: Types.ObjectId[];
+  // Media
+  images: string[]; // Array of image URLs
+  videos: string[]; // Array of video URLs
   // IP Protection & Trust
   ideaHash: string; // Cryptographic hash for IP proof
   versionHistory: Array<{
@@ -60,6 +63,14 @@ const IdeaSchema = new Schema<IIdea>(
       default: [],
     },
     requiredSkills: {
+      type: [String],
+      default: [],
+    },
+    images: {
+      type: [String],
+      default: [],
+    },
+    videos: {
       type: [String],
       default: [],
     },
