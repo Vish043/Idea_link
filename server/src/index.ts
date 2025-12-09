@@ -17,6 +17,7 @@ import messageRoutes from './routes/messages';
 import uploadRoutes from './routes/uploads';
 import ratingRoutes from './routes/ratings';
 import matchingRoutes from './routes/matching';
+import statsRoutes from './routes/stats';
 
 dotenv.config();
 
@@ -52,6 +53,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/matching', matchingRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Serve uploaded files statically (for direct file access, after route handlers)
 // This will handle files that don't match route patterns
