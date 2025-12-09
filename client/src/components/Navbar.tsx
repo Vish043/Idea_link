@@ -1,17 +1,36 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import api from '../utils/api';
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [platformStats, setPlatformStats] = useState({ ideas: 0, users: 0, collaborations: 0 });
 
   useEffect(() => {
     // Check if user is authenticated
     const token = localStorage.getItem('token');
     setIsAuthenticated(!!token);
   }, [location.pathname]); // Re-check when route changes
+
+  useEffect(() => {
+    // Fetch platform stats
+    const fetchStats = async () => {
+      try {
+        const statsRes = await api.get('/stats');
+        setPlatformStats({
+          ideas: statsRes.data?.ideas || 0,
+          users: statsRes.data?.users || 0,
+          collaborations: statsRes.data?.collaborations || 0,
+        });
+      } catch (err) {
+        // Ignore errors for stats
+      }
+    };
+    fetchStats();
+  }, []);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -33,10 +52,36 @@ export default function Navbar() {
     <nav className="bg-white shadow-md">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <span className="text-xl sm:text-2xl font-bold text-indigo-600">IdeaConnect</span>
-          </Link>
+          {/* Logo and Stats */}
+          <div className="flex items-center space-x-4 sm:space-x-6">
+            <Link to="/" className="flex items-center space-x-2">
+              <span className="text-xl sm:text-2xl font-bold text-indigo-600">IdeaConnect</span>
+            </Link>
+            {/* Compact Platform Stats */}
+            <div className="hidden lg:flex items-center space-x-3 text-xs">
+              <div 
+                className="flex items-center space-x-1 text-gray-600 cursor-default" 
+                title="Total Ideas"
+              >
+                <span className="text-sm">💡</span>
+                <span className="font-semibold text-gray-700">{platformStats.ideas}</span>
+              </div>
+              <div 
+                className="flex items-center space-x-1 text-gray-600 cursor-default" 
+                title="Total Users"
+              >
+                <span className="text-sm">👥</span>
+                <span className="font-semibold text-gray-700">{platformStats.users}</span>
+              </div>
+              <div 
+                className="flex items-center space-x-1 text-gray-600 cursor-default" 
+                title="Total Collaborations"
+              >
+                <span className="text-sm">🤝</span>
+                <span className="font-semibold text-gray-700">{platformStats.collaborations}</span>
+              </div>
+            </div>
+          </div>
 
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center space-x-4 lg:space-x-6">

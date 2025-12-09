@@ -7,17 +7,18 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch some stats if possible
+    // Fetch platform stats
     const fetchStats = async () => {
       try {
-        const ideasRes = await api.get('/ideas');
+        const statsRes = await api.get('/stats');
         setStats({
-          ideas: ideasRes.data?.length || 0,
-          users: 0, // Would need a users endpoint
-          collaborations: 0, // Would need a collaborations endpoint
+          ideas: statsRes.data?.ideas || 0,
+          users: statsRes.data?.users || 0,
+          collaborations: statsRes.data?.collaborations || 0,
         });
       } catch (err) {
-        // Ignore errors for stats
+        // Ignore errors for stats - show 0 if API fails
+        setStats({ ideas: 0, users: 0, collaborations: 0 });
       } finally {
         setLoading(false);
       }
@@ -93,20 +94,20 @@ export default function HomePage() {
       </div>
 
       {/* Stats Section */}
-      {!loading && stats.ideas > 0 && (
+      {!loading && (stats.ideas > 0 || stats.users > 0 || stats.collaborations > 0) && (
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="bg-white rounded-xl shadow-md p-6 text-center transform hover:scale-105 transition-transform">
-                <div className="text-3xl font-bold text-indigo-600 mb-2">{stats.ideas}+</div>
+                <div className="text-3xl font-bold text-indigo-600 mb-2">{stats.ideas}</div>
                 <div className="text-gray-600">Active Ideas</div>
               </div>
               <div className="bg-white rounded-xl shadow-md p-6 text-center transform hover:scale-105 transition-transform">
-                <div className="text-3xl font-bold text-indigo-600 mb-2">100+</div>
+                <div className="text-3xl font-bold text-indigo-600 mb-2">{stats.users}</div>
                 <div className="text-gray-600">Users</div>
               </div>
               <div className="bg-white rounded-xl shadow-md p-6 text-center transform hover:scale-105 transition-transform">
-                <div className="text-3xl font-bold text-indigo-600 mb-2">50+</div>
+                <div className="text-3xl font-bold text-indigo-600 mb-2">{stats.collaborations}</div>
                 <div className="text-gray-600">Collaborations</div>
               </div>
             </div>
