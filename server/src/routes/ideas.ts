@@ -81,7 +81,7 @@ router.post('/', authMiddleware, ideaMediaUpload, async (req: Request, res: Resp
     });
 
     await idea.save();
-    await idea.populate('owner', 'name email avatarUrl');
+    await idea.populate('owner', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified');
 
     // Update trust badges for idea creator
     await updateTrustBadges(req.user._id.toString());
@@ -126,8 +126,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     const ideas = await Idea.find(query)
-      .populate('owner', 'name email avatarUrl')
-      .populate('collaborators', 'name email avatarUrl')
+      .populate('owner', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
+      .populate('collaborators', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
       .sort({ createdAt: -1 });
 
     res.json(ideas);
@@ -225,7 +225,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // PUT /api/ideas/:id
-router.put('/:id', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', authMiddleware, ideaMediaUpload, async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user) {
       throw createError('User not found', 404);
@@ -254,21 +254,73 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response, next: Nex
       throw createError('Invalid status value', 400);
     }
 
+    // Handle image uploads - append new images to existing ones
+    let imageUrls: string[] = idea.images ? [...idea.images] : [];
+    if (req.files && typeof req.files === 'object' && 'images' in req.files && Array.isArray(req.files.images)) {
+      for (const file of req.files.images) {
+        try {
+          const url = await uploadFile(file, 'ideas');
+          imageUrls.push(url);
+        } catch (error: any) {
+          return next(createError(`Failed to upload image: ${error.message}`, 500));
+        }
+      }
+    }
+
+    // Handle video uploads - append new videos to existing ones
+    let videoUrls: string[] = idea.videos ? [...idea.videos] : [];
+    if (req.files && typeof req.files === 'object' && 'videos' in req.files && Array.isArray(req.files.videos)) {
+      for (const file of req.files.videos) {
+        try {
+          const url = await uploadFile(file, 'ideas');
+          videoUrls.push(url);
+        } catch (error: any) {
+          return next(createError(`Failed to upload video: ${error.message}`, 500));
+        }
+      }
+    }
+
+    // Update version history if description changed
+    const updateData: any = {
+      ...(title && { title }),
+      ...(shortSummary && { shortSummary }),
+      ...(description && { description }),
+      ...(tags !== undefined && { tags }),
+      ...(requiredSkills !== undefined && { requiredSkills }),
+      ...(visibility && { visibility }),
+      ...(status && { status }),
+      images: imageUrls,
+      videos: videoUrls,
+    };
+
+    // If description changed, add new version entry
+    if (description && description !== idea.description) {
+      const versionHistory = idea.versionHistory || [];
+      let newVersionNumber = 1;
+      
+      if (versionHistory.length > 0) {
+        const versions = versionHistory
+          .map((v: any) => typeof v.version === 'number' ? v.version : 0)
+          .filter((v: number) => !isNaN(v) && v > 0);
+        
+        if (versions.length > 0) {
+          newVersionNumber = Math.max(...versions) + 1;
+        }
+      }
+      
+      updateData.versionHistory = [
+        ...versionHistory,
+        createVersionEntry(description, req.user._id.toString(), newVersionNumber),
+      ];
+    }
+
     const updatedIdea = await Idea.findByIdAndUpdate(
       id,
-      {
-        ...(title && { title }),
-        ...(shortSummary && { shortSummary }),
-        ...(description && { description }),
-        ...(tags !== undefined && { tags }),
-        ...(requiredSkills !== undefined && { requiredSkills }),
-        ...(visibility && { visibility }),
-        ...(status && { status }),
-      },
+      updateData,
       { new: true, runValidators: true }
     )
-      .populate('owner', 'name email avatarUrl')
-      .populate('collaborators', 'name email avatarUrl');
+      .populate('owner', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
+      .populate('collaborators', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified');
 
     res.json(updatedIdea);
   } catch (error) {

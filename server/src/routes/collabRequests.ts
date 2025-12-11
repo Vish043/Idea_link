@@ -107,7 +107,7 @@ router.get('/mine', authMiddleware, async (req: Request, res: Response, next: Ne
       idea: { $in: ideaIds },
     })
       .populate('idea', 'title shortSummary')
-      .populate('sender', 'name email avatarUrl skills interests')
+      .populate('sender', 'name email avatarUrl skills interests reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
       .sort({ createdAt: -1 });
 
     res.json(requests);
@@ -128,7 +128,7 @@ router.get('/sent', authMiddleware, async (req: Request, res: Response, next: Ne
       sender: req.user._id,
     })
       .populate('idea', 'title shortSummary owner')
-      .populate('idea.owner', 'name')
+      .populate('idea.owner', 'name reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
       .sort({ createdAt: -1 });
 
     res.json(requests);
