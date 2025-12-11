@@ -4,6 +4,8 @@ import api, { getFileUrl } from '../utils/api';
 import StatusBadge from '../components/StatusBadge';
 import EmptyState from '../components/EmptyState';
 import { IdeaCardSkeleton } from '../components/LoadingSkeleton';
+import TrustBadges from '../components/TrustBadges';
+import ReputationDisplay from '../components/ReputationDisplay';
 
 interface Idea {
   _id: string;
@@ -21,11 +23,24 @@ interface Idea {
     name: string;
     email: string;
     avatarUrl?: string;
+    reputationScore?: number;
+    averageRating?: number;
+    totalRatings?: number;
+    trustBadges?: string[];
+    completedCollaborations?: number;
+    emailVerified?: boolean;
   };
   collaborators: Array<{
     _id: string;
     name: string;
     email: string;
+    avatarUrl?: string;
+    reputationScore?: number;
+    averageRating?: number;
+    totalRatings?: number;
+    trustBadges?: string[];
+    completedCollaborations?: number;
+    emailVerified?: boolean;
   }>;
   createdAt: string;
   updatedAt: string;
@@ -38,6 +53,7 @@ export default function IdeasPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCollabModal, setShowCollabModal] = useState(false);
@@ -226,8 +242,12 @@ export default function IdeasPage() {
 
       // Use axios directly for FormData (api instance sets JSON header)
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/ideas`, {
-        method: 'POST',
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const isEdit = editingIdeaId !== null;
+      const url = isEdit ? `${apiUrl}/ideas/${editingIdeaId}` : `${apiUrl}/ideas`;
+      
+      const response = await fetch(url, {
+        method: isEdit ? 'PUT' : 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -236,11 +256,12 @@ export default function IdeasPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create idea');
+        throw new Error(errorData.error || `Failed to ${isEdit ? 'update' : 'create'} idea`);
       }
 
-      showSuccess('Idea created successfully!');
+      showSuccess(`Idea ${isEdit ? 'updated' : 'created'} successfully!`);
       setShowCreateModal(false);
+      setEditingIdeaId(null);
       setFormData({
         title: '',
         shortSummary: '',
@@ -255,8 +276,12 @@ export default function IdeasPage() {
       setImagePreviews([]);
       setVideoPreviews([]);
       fetchIdeas();
+      if (isEdit && selectedIdea?._id === editingIdeaId) {
+        setShowDetailModal(false);
+        setSelectedIdea(null);
+      }
     } catch (err: any) {
-      const errorMessage = err.message || 'Failed to create idea';
+      const errorMessage = err.message || `Failed to ${editingIdeaId ? 'update' : 'create'} idea`;
       showError(errorMessage);
     } finally {
       setSubmitting(false);
@@ -265,6 +290,7 @@ export default function IdeasPage() {
 
   const handleCloseModal = () => {
     setShowCreateModal(false);
+    setEditingIdeaId(null);
     setFormData({
       title: '',
       shortSummary: '',
@@ -280,6 +306,37 @@ export default function IdeasPage() {
     setSelectedVideos([]);
     setImagePreviews([]);
     setVideoPreviews([]);
+  };
+
+  const handleEditIdea = async (ideaId: string) => {
+    try {
+      const response = await api.get(`/ideas/${ideaId}`);
+      const idea = response.data;
+      
+      setEditingIdeaId(ideaId);
+      setFormData({
+        title: idea.title || '',
+        shortSummary: idea.shortSummary || '',
+        description: idea.description || '',
+        tags: idea.tags || [],
+        requiredSkills: idea.requiredSkills || [],
+        visibility: idea.visibility || 'public',
+        status: idea.status || 'looking_for_collaborators',
+      });
+      
+      // Set existing images/videos as previews
+      if (idea.images && idea.images.length > 0) {
+        setImagePreviews(idea.images.map((url: string) => getFileUrl(url)));
+      }
+      if (idea.videos && idea.videos.length > 0) {
+        setVideoPreviews(idea.videos.map((url: string) => getFileUrl(url)));
+      }
+      
+      setShowCreateModal(true);
+      setShowDetailModal(false);
+    } catch (err: any) {
+      showError(err.response?.data?.error || 'Failed to load idea for editing');
+    }
   };
 
   const handleViewIdea = async (ideaId: string) => {
@@ -724,14 +781,41 @@ export default function IdeasPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 flex items-center justify-center text-white text-xs font-semibold">
-                      {idea.owner.name.charAt(0).toUpperCase()}
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="h-6 w-6 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 flex items-center justify-center text-white text-xs font-semibold">
+                        {idea.owner.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">{idea.owner.name}</span>
+                        {idea.owner.emailVerified && (
+                          <span className="text-green-600 text-xs" title="Email Verified">✓</span>
+                        )}
+                        {idea.owner.trustBadges && idea.owner.trustBadges.length > 0 && (
+                          <TrustBadges badges={idea.owner.trustBadges} size="sm" />
+                        )}
+                      </div>
                     </div>
-                    <span className="font-medium">{idea.owner.name}</span>
+                    <span className="text-gray-400">{new Date(idea.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <span className="text-gray-400">{new Date(idea.createdAt).toLocaleDateString()}</span>
+                  {(idea.owner.reputationScore !== undefined || idea.owner.completedCollaborations !== undefined) && (
+                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                      {idea.owner.reputationScore !== undefined && (
+                        <ReputationDisplay
+                          reputationScore={idea.owner.reputationScore || 0}
+                          averageRating={idea.owner.averageRating || 0}
+                          totalRatings={idea.owner.totalRatings || 0}
+                          size="sm"
+                        />
+                      )}
+                      {idea.owner.completedCollaborations !== undefined && idea.owner.completedCollaborations > 0 && (
+                        <span className="text-gray-500">
+                          {idea.owner.completedCollaborations} collaboration{idea.owner.completedCollaborations !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {idea.collaborators.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
@@ -742,7 +826,16 @@ export default function IdeasPage() {
                   </div>
                 )}
                 {isOwner(idea) && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="mt-3 pt-3 border-t border-gray-200 flex flex-col gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditIdea(idea._id);
+                      }}
+                      className="w-full px-3 py-2.5 sm:py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors min-h-[44px] sm:min-h-0"
+                    >
+                      Edit Idea
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -766,7 +859,9 @@ export default function IdeasPage() {
             <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
               <div className="p-4 sm:p-6">
                 <div className="flex justify-between items-center mb-4 sm:mb-6">
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Create New Idea</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                    {editingIdeaId ? 'Edit Idea' : 'Create New Idea'}
+                  </h2>
                   <button
                     onClick={handleCloseModal}
                     className="text-gray-400 hover:text-gray-600 text-2xl sm:text-3xl"
@@ -1015,7 +1110,9 @@ export default function IdeasPage() {
                       disabled={submitting}
                       className="flex-1 px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {submitting ? 'Creating...' : 'Create Idea'}
+                      {submitting 
+                        ? (editingIdeaId ? 'Updating...' : 'Creating...') 
+                        : (editingIdeaId ? 'Update Idea' : 'Create Idea')}
                     </button>
                     <button
                       type="button"
@@ -1039,21 +1136,48 @@ export default function IdeasPage() {
                 <div className="flex justify-between items-start mb-4 sm:mb-6 gap-2">
                   <div className="flex-1 min-w-0">
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 break-words">{selectedIdea.title}</h2>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span>By {selectedIdea.owner.name}</span>
-                      <span>•</span>
-                      <span>{new Date(selectedIdea.createdAt).toLocaleDateString()}</span>
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          selectedIdea.status === 'looking_for_collaborators'
-                            ? 'bg-blue-100 text-blue-800'
-                            : selectedIdea.status === 'in_progress'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}
-                      >
-                        {selectedIdea.status.replace('_', ' ')}
-                      </span>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>By <strong>{selectedIdea.owner.name}</strong></span>
+                          {selectedIdea.owner.emailVerified && (
+                            <span className="text-green-600 text-xs" title="Email Verified">✓</span>
+                          )}
+                          {selectedIdea.owner.trustBadges && selectedIdea.owner.trustBadges.length > 0 && (
+                            <TrustBadges badges={selectedIdea.owner.trustBadges} size="sm" />
+                          )}
+                        </div>
+                        <span>•</span>
+                        <span>{new Date(selectedIdea.createdAt).toLocaleDateString()}</span>
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            selectedIdea.status === 'looking_for_collaborators'
+                              ? 'bg-blue-100 text-blue-800'
+                              : selectedIdea.status === 'in_progress'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-green-100 text-green-800'
+                          }`}
+                        >
+                          {selectedIdea.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                      {(selectedIdea.owner.reputationScore !== undefined || selectedIdea.owner.completedCollaborations !== undefined) && (
+                        <div className="flex items-center gap-3 flex-wrap text-xs">
+                          {selectedIdea.owner.reputationScore !== undefined && (
+                            <ReputationDisplay
+                              reputationScore={selectedIdea.owner.reputationScore || 0}
+                              averageRating={selectedIdea.owner.averageRating || 0}
+                              totalRatings={selectedIdea.owner.totalRatings || 0}
+                              size="sm"
+                            />
+                          )}
+                          {selectedIdea.owner.completedCollaborations !== undefined && selectedIdea.owner.completedCollaborations > 0 && (
+                            <span className="text-gray-500">
+                              {selectedIdea.owner.completedCollaborations} completed collaboration{selectedIdea.owner.completedCollaborations !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button
@@ -1155,14 +1279,44 @@ export default function IdeasPage() {
                   {selectedIdea.collaborators.length > 0 && (
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">Collaborators</h3>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="space-y-3">
                         {selectedIdea.collaborators.map((collab, idx) => (
-                          <span
+                          <div
                             key={idx}
-                            className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm"
+                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
                           >
-                            {collab.name}
-                          </span>
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-green-400 to-emerald-400 flex items-center justify-center text-white font-semibold">
+                              {collab.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-gray-900">{collab.name}</span>
+                                {collab.emailVerified && (
+                                  <span className="text-green-600 text-xs" title="Email Verified">✓</span>
+                                )}
+                                {collab.trustBadges && collab.trustBadges.length > 0 && (
+                                  <TrustBadges badges={collab.trustBadges} size="sm" />
+                                )}
+                              </div>
+                              {(collab.reputationScore !== undefined || collab.completedCollaborations !== undefined) && (
+                                <div className="flex items-center gap-2 mt-1 flex-wrap text-xs">
+                                  {collab.reputationScore !== undefined && (
+                                    <ReputationDisplay
+                                      reputationScore={collab.reputationScore || 0}
+                                      averageRating={collab.averageRating || 0}
+                                      totalRatings={collab.totalRatings || 0}
+                                      size="sm"
+                                    />
+                                  )}
+                                  {collab.completedCollaborations !== undefined && collab.completedCollaborations > 0 && (
+                                    <span className="text-gray-500">
+                                      {collab.completedCollaborations} collaboration{collab.completedCollaborations !== 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -1171,13 +1325,21 @@ export default function IdeasPage() {
                   {/* Actions */}
                   <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
                     {isOwner(selectedIdea) && (
-                      <button
-                        onClick={() => handleDeleteIdea(selectedIdea._id)}
-                        disabled={deleting === selectedIdea._id}
-                        className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
-                      >
-                        {deleting === selectedIdea._id ? 'Deleting...' : 'Delete Idea'}
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleEditIdea(selectedIdea._id)}
+                          className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                        >
+                          Edit Idea
+                        </button>
+                        <button
+                          onClick={() => handleDeleteIdea(selectedIdea._id)}
+                          disabled={deleting === selectedIdea._id}
+                          className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                        >
+                          {deleting === selectedIdea._id ? 'Deleting...' : 'Delete Idea'}
+                        </button>
+                      </>
                     )}
                     {isAuthenticated && !isOwner(selectedIdea) && !isCollaborator(selectedIdea) && selectedIdea.status === 'looking_for_collaborators' && (
                       <button

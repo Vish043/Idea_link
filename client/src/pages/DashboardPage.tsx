@@ -5,6 +5,8 @@ import ProfileViewModal from '../components/ProfileViewModal';
 import ChatModal from '../components/ChatModal';
 import PDFViewerModal from '../components/PDFViewerModal';
 import UserRatingModal from '../components/UserRatingModal';
+import TrustBadges from '../components/TrustBadges';
+import ReputationDisplay from '../components/ReputationDisplay';
 import { DashboardStatsSkeleton } from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 
@@ -27,6 +29,12 @@ interface CollaborationRequest {
     owner?: {
       _id: string;
       name: string;
+      reputationScore?: number;
+      averageRating?: number;
+      totalRatings?: number;
+      trustBadges?: string[];
+      completedCollaborations?: number;
+      emailVerified?: boolean;
     };
   };
   sender: {
@@ -36,6 +44,12 @@ interface CollaborationRequest {
     avatarUrl?: string;
     skills: string[];
     interests: string[];
+    reputationScore?: number;
+    averageRating?: number;
+    totalRatings?: number;
+    trustBadges?: string[];
+    completedCollaborations?: number;
+    emailVerified?: boolean;
   };
   message: string;
   resumeUrl?: string;
@@ -357,9 +371,34 @@ export default function DashboardPage() {
                         <h3 className="font-semibold text-gray-900">
                           {request.idea.title}
                         </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          From: {request.sender.name}
-                        </p>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span>From: <strong>{request.sender.name}</strong></span>
+                            {request.sender.emailVerified && (
+                              <span className="text-green-600 text-xs" title="Email Verified">✓</span>
+                            )}
+                            {request.sender.trustBadges && request.sender.trustBadges.length > 0 && (
+                              <TrustBadges badges={request.sender.trustBadges} size="sm" />
+                            )}
+                          </div>
+                          {(request.sender.reputationScore !== undefined || request.sender.completedCollaborations !== undefined) && (
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {request.sender.reputationScore !== undefined && (
+                                <ReputationDisplay
+                                  reputationScore={request.sender.reputationScore || 0}
+                                  averageRating={request.sender.averageRating || 0}
+                                  totalRatings={request.sender.totalRatings || 0}
+                                  size="sm"
+                                />
+                              )}
+                              {request.sender.completedCollaborations !== undefined && request.sender.completedCollaborations > 0 && (
+                                <span className="text-xs text-gray-500">
+                                  {request.sender.completedCollaborations} collaboration{request.sender.completedCollaborations !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
@@ -496,9 +535,34 @@ export default function DashboardPage() {
                         <h3 className="font-semibold text-gray-900">
                           {request.idea.title}
                         </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          To: {(request.idea as any).owner?.name || 'Unknown'}
-                        </p>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span>To: <strong>{(request.idea as any).owner?.name || 'Unknown'}</strong></span>
+                            {(request.idea as any).owner?.emailVerified && (
+                              <span className="text-green-600 text-xs" title="Email Verified">✓</span>
+                            )}
+                            {(request.idea as any).owner?.trustBadges && (request.idea as any).owner.trustBadges.length > 0 && (
+                              <TrustBadges badges={(request.idea as any).owner.trustBadges} size="sm" />
+                            )}
+                          </div>
+                          {((request.idea as any).owner?.reputationScore !== undefined || (request.idea as any).owner?.completedCollaborations !== undefined) && (
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {(request.idea as any).owner?.reputationScore !== undefined && (
+                                <ReputationDisplay
+                                  reputationScore={(request.idea as any).owner.reputationScore || 0}
+                                  averageRating={(request.idea as any).owner.averageRating || 0}
+                                  totalRatings={(request.idea as any).owner.totalRatings || 0}
+                                  size="sm"
+                                />
+                              )}
+                              {(request.idea as any).owner?.completedCollaborations !== undefined && (request.idea as any).owner.completedCollaborations > 0 && (
+                                <span className="text-xs text-gray-500">
+                                  {(request.idea as any).owner.completedCollaborations} collaboration{(request.idea as any).owner.completedCollaborations !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
@@ -575,9 +639,34 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">{idea.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Owner: {(idea as any).owner?.name || 'Unknown'}
-                        </p>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span>Owner: <strong>{(idea as any).owner?.name || 'Unknown'}</strong></span>
+                            {(idea as any).owner?.emailVerified && (
+                              <span className="text-green-600 text-xs" title="Email Verified">✓</span>
+                            )}
+                            {(idea as any).owner?.trustBadges && (idea as any).owner.trustBadges.length > 0 && (
+                              <TrustBadges badges={(idea as any).owner.trustBadges} size="sm" />
+                            )}
+                          </div>
+                          {((idea as any).owner?.reputationScore !== undefined || (idea as any).owner?.completedCollaborations !== undefined) && (
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {(idea as any).owner?.reputationScore !== undefined && (
+                                <ReputationDisplay
+                                  reputationScore={(idea as any).owner.reputationScore || 0}
+                                  averageRating={(idea as any).owner.averageRating || 0}
+                                  totalRatings={(idea as any).owner.totalRatings || 0}
+                                  size="sm"
+                                />
+                              )}
+                              {(idea as any).owner?.completedCollaborations !== undefined && (idea as any).owner.completedCollaborations > 0 && (
+                                <span className="text-xs text-gray-500">
+                                  {(idea as any).owner.completedCollaborations} collaboration{(idea as any).owner.completedCollaborations !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
