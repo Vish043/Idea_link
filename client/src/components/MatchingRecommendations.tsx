@@ -15,6 +15,7 @@ interface Recommendation {
     bio: string;
     averageRating: number;
     reputationScore: number;
+    totalRatings?: number;
     trustBadges: string[];
     completedCollaborations: number;
   };
