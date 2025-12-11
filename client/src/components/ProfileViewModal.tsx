@@ -3,9 +3,12 @@ import api, { getFileUrl } from '../utils/api';
 import { useToast } from '../hooks/useToast';
 import { getImageUrl } from '../utils/imageUtils';
 import PDFViewerModal from './PDFViewerModal';
+import TrustBadges from './TrustBadges';
+import ReputationDisplay from './ReputationDisplay';
 
 interface User {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   role: string;
@@ -14,6 +17,12 @@ interface User {
   bio: string;
   avatarUrl: string;
   resumeUrl?: string;
+  reputationScore?: number;
+  totalRatings?: number;
+  averageRating?: number;
+  trustBadges?: string[];
+  completedCollaborations?: number;
+  emailVerified?: boolean;
 }
 
 interface ProfileViewModalProps {
@@ -89,11 +98,30 @@ export default function ProfileViewModal({ userId, isOpen, onClose, onStartChat 
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 break-words">{user.name}</h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 break-words">{user.name}</h3>
+                    {user.emailVerified && (
+                      <span className="text-green-600 text-sm" title="Email Verified">✓</span>
+                    )}
+                  </div>
                   <p className="text-sm sm:text-base text-gray-600 break-words">{user.email}</p>
                   <span className="inline-block mt-2 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs sm:text-sm">
                     {user.role}
                   </span>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <ReputationDisplay
+                      reputationScore={user.reputationScore || 0}
+                      averageRating={user.averageRating || 0}
+                      totalRatings={user.totalRatings || 0}
+                      size="sm"
+                    />
+                    <TrustBadges badges={user.trustBadges || []} size="sm" />
+                  </div>
+                  {user.completedCollaborations !== undefined && user.completedCollaborations > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {user.completedCollaborations} completed collaboration{user.completedCollaborations !== 1 ? 's' : ''}
+                    </p>
+                  )}
                 </div>
               </div>
 

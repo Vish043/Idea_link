@@ -3,9 +3,13 @@ import { useToast } from '../hooks/useToast';
 import api, { getFileUrl } from '../utils/api';
 import { getImageUrl } from '../utils/imageUtils';
 import PDFViewerModal from '../components/PDFViewerModal';
+import TrustBadges from '../components/TrustBadges';
+import ReputationDisplay from '../components/ReputationDisplay';
+import UserRatingsList from '../components/UserRatingsList';
 
 interface User {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   role: 'student' | 'founder' | 'professional' | 'other';
@@ -14,6 +18,12 @@ interface User {
   bio: string;
   avatarUrl: string;
   resumeUrl: string;
+  reputationScore?: number;
+  totalRatings?: number;
+  averageRating?: number;
+  trustBadges?: string[];
+  completedCollaborations?: number;
+  emailVerified?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,6 +42,7 @@ export default function ProfilePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [pdfViewerUrl, setPdfViewerUrl] = useState<string>('');
+  const [sendingVerification, setSendingVerification] = useState(false);
   const { showError, showSuccess } = useToast();
 
   useEffect(() => {
@@ -187,6 +198,29 @@ export default function ProfilePage() {
     setAvatarPreview(null);
   };
 
+  const handleRequestEmailVerification = async () => {
+    try {
+      setSendingVerification(true);
+      const response = await api.post('/email-verification/send');
+      
+      if (response.data.token && process.env.NODE_ENV === 'development') {
+        // In development, show the token
+        showSuccess(`Verification link: ${response.data.verificationLink || 'Check console'}`);
+        console.log('Verification Token:', response.data.token);
+        console.log('Verification Link:', response.data.verificationLink);
+      } else {
+        showSuccess(response.data.message || 'Verification email sent! Please check your inbox.');
+      }
+      
+      // Refresh profile to get updated status
+      fetchProfile();
+    } catch (err: any) {
+      showError(err.response?.data?.error || 'Failed to send verification email');
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -247,7 +281,25 @@ export default function ProfilePage() {
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Profile</h1>
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Profile</h1>
+              {!editing && user && (
+                <div className="flex flex-wrap items-center gap-3 mt-2">
+                  <ReputationDisplay
+                    reputationScore={user.reputationScore || 0}
+                    averageRating={user.averageRating || 0}
+                    totalRatings={user.totalRatings || 0}
+                    size="md"
+                  />
+                  <TrustBadges badges={user.trustBadges || []} size="sm" />
+                  {user.completedCollaborations !== undefined && user.completedCollaborations > 0 && (
+                    <span className="text-sm text-gray-600">
+                      {user.completedCollaborations} completed collaboration{user.completedCollaborations !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
             {!editing && (
               <button
                 onClick={() => setEditing(true)}
@@ -574,18 +626,52 @@ export default function ProfilePage() {
 
               {/* Account Info */}
               {!editing && (
-                <div className="pt-4 border-t border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-                    <div>
-                      <span className="font-medium">Member since:</span>{' '}
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </div>
-                    <div>
-                      <span className="font-medium">Last updated:</span>{' '}
-                      {new Date(user.updatedAt).toLocaleDateString()}
+                <div className="pt-4 border-t border-gray-200 space-y-6">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                      <div>
+                        <span className="font-medium">Member since:</span>{' '}
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </div>
+                      <div>
+                        <span className="font-medium">Last updated:</span>{' '}
+                        {new Date(user.updatedAt).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Email:</span>
+                        {user.emailVerified ? (
+                          <span className="text-green-600">✓ Verified</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-amber-600">Not Verified</span>
+                            <button
+                              onClick={handleRequestEmailVerification}
+                              disabled={sendingVerification}
+                              className="text-xs px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                              {sendingVerification ? 'Sending...' : 'Verify Email'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Ratings Section */}
+                  {user && (user._id || user.id) && (
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900 mb-4">Ratings & Reviews</h2>
+                      <UserRatingsList 
+                        userId={user._id || user.id} 
+                        maxDisplay={5}
+                        onRatingDeleted={() => {
+                          // Refresh user profile to update reputation
+                          fetchProfile();
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -89,9 +89,9 @@ export default function MatchingRecommendations({
                   <TrustBadges badges={rec.user.trustBadges || []} size="sm" />
                 </div>
                 <ReputationDisplay
-                  reputationScore={rec.user.reputationScore}
-                  averageRating={rec.user.averageRating}
-                  totalRatings={0}
+                  reputationScore={rec.user.reputationScore || 0}
+                  averageRating={rec.user.averageRating || 0}
+                  totalRatings={rec.user.totalRatings || 0}
                   size="sm"
                 />
                 {rec.user.bio && (

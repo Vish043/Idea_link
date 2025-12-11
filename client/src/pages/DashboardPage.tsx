@@ -4,6 +4,7 @@ import api, { getFileUrl } from '../utils/api';
 import ProfileViewModal from '../components/ProfileViewModal';
 import ChatModal from '../components/ChatModal';
 import PDFViewerModal from '../components/PDFViewerModal';
+import UserRatingModal from '../components/UserRatingModal';
 import { DashboardStatsSkeleton } from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 
@@ -68,6 +69,10 @@ export default function DashboardPage() {
   const [chatIdeaId, setChatIdeaId] = useState<string | null>(null);
   const [chatIdeaTitle, setChatIdeaTitle] = useState<string | null>(null);
   const [deletingIdeaId, setDeletingIdeaId] = useState<string | null>(null);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingUserId, setRatingUserId] = useState<string | null>(null);
+  const [ratingUserName, setRatingUserName] = useState<string | null>(null);
+  const [ratingIdeaId, setRatingIdeaId] = useState<string | null>(null);
   const { showError, showSuccess } = useToast();
 
   useEffect(() => {
@@ -412,28 +417,41 @@ export default function DashboardPage() {
                       </div>
                     )}
                     {request.status === 'accepted' && (
-                      <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                      <div className="flex flex-col gap-2 mt-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedUserId(request.sender._id);
+                              setSelectedUserName(request.sender.name);
+                              setShowProfileModal(true);
+                            }}
+                            className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                          >
+                            View Profile
+                          </button>
+                          <button
+                            onClick={() => {
+                              setChatType('personal');
+                              setChatUserId(request.sender._id);
+                              setChatIdeaId(null);
+                              setSelectedUserName(request.sender.name);
+                              setShowChatModal(true);
+                            }}
+                            className="flex-1 px-3 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors"
+                          >
+                            Chat
+                          </button>
+                        </div>
                         <button
                           onClick={() => {
-                            setSelectedUserId(request.sender._id);
-                            setSelectedUserName(request.sender.name);
-                            setShowProfileModal(true);
+                            setRatingUserId(request.sender._id);
+                            setRatingUserName(request.sender.name);
+                            setRatingIdeaId((request.idea as any)._id || request.idea);
+                            setShowRatingModal(true);
                           }}
-                          className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                          className="w-full px-3 py-2 bg-yellow-600 text-white text-sm rounded-md hover:bg-yellow-700 transition-colors"
                         >
-                          View Profile
-                        </button>
-                        <button
-                          onClick={() => {
-                            setChatType('personal');
-                            setChatUserId(request.sender._id);
-                            setChatIdeaId(null);
-                            setSelectedUserName(request.sender.name);
-                            setShowChatModal(true);
-                          }}
-                          className="flex-1 px-3 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors"
-                        >
-                          Chat
+                          ⭐ Rate Collaborator
                         </button>
                       </div>
                     )}
@@ -580,18 +598,33 @@ export default function DashboardPage() {
                       <span>{idea.collaborators.length} collaborator(s)</span>
                       <span>{new Date(idea.createdAt).toLocaleDateString()}</span>
                     </div>
-                    <button
-                      onClick={() => {
-                        setChatType('group');
-                        setChatIdeaId(idea._id);
-                        setChatUserId(null);
-                        setChatIdeaTitle(idea.title);
-                        setShowChatModal(true);
-                      }}
-                      className="w-full mt-2 px-3 py-2.5 sm:py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors min-h-[44px] sm:min-h-0"
-                    >
-                      Open Group Chat
-                    </button>
+                    <div className="flex flex-col gap-2 mt-2">
+                      <button
+                        onClick={() => {
+                          setChatType('group');
+                          setChatIdeaId(idea._id);
+                          setChatUserId(null);
+                          setChatIdeaTitle(idea.title);
+                          setShowChatModal(true);
+                        }}
+                        className="w-full px-3 py-2.5 sm:py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors min-h-[44px] sm:min-h-0"
+                      >
+                        Open Group Chat
+                      </button>
+                      {(idea as any).owner && (idea as any).owner._id && (
+                        <button
+                          onClick={() => {
+                            setRatingUserId((idea as any).owner._id);
+                            setRatingUserName((idea as any).owner.name || 'Idea Owner');
+                            setRatingIdeaId(idea._id);
+                            setShowRatingModal(true);
+                          }}
+                          className="w-full px-3 py-2 bg-yellow-600 text-white text-sm rounded-md hover:bg-yellow-700 transition-colors"
+                        >
+                          ⭐ Rate Idea Owner
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -672,6 +705,23 @@ export default function DashboardPage() {
           setChatUserId(userId);
           setChatIdeaId(null);
           setShowChatModal(true);
+        }}
+      />
+
+      {/* Rating Modal */}
+      <UserRatingModal
+        isOpen={showRatingModal}
+        onClose={() => {
+          setShowRatingModal(false);
+          setRatingUserId(null);
+          setRatingUserName(null);
+          setRatingIdeaId(null);
+        }}
+        ratedUserId={ratingUserId || ''}
+        ratedUserName={ratingUserName || ''}
+        collaborationId={ratingIdeaId || undefined}
+        onRatingSubmitted={() => {
+          fetchDashboardData();
         }}
       />
 

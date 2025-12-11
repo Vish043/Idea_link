@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ChatListPage from './pages/ChatListPage';
 import HomePage from './pages/HomePage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/chats" element={<ChatListPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/terms" element={<TermsPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
         </Routes>
         <Toaster />
       </div>
