@@ -50,6 +50,7 @@ router.get(
             bio: r.user.bio,
             averageRating: r.user.averageRating,
             reputationScore: r.user.reputationScore,
+            totalRatings: r.user.totalRatings,
             trustBadges: r.user.trustBadges,
             completedCollaborations: r.user.completedCollaborations,
           },
