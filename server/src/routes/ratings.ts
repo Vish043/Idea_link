@@ -5,6 +5,7 @@ import { Idea } from '../models/Idea';
 import { authMiddleware } from '../middleware/auth';
 import { createError } from '../middleware/errorHandler';
 import { validateObjectId } from '../utils/validation';
+import { updateTrustBadges } from '../utils/trustBadges';
 
 const router = express.Router();
 
@@ -88,6 +89,71 @@ router.get('/user/:userId', async (req: Request, res: Response, next: NextFuncti
       .sort({ createdAt: -1 });
 
     res.json(ratings);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/ratings/check/:ratedUserId - Check if current user has rated a user
+router.get('/check/:ratedUserId', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw createError('User not found', 404);
+    }
+
+    const { ratedUserId } = req.params;
+    const { collaborationId } = req.query;
+
+    validateObjectId(ratedUserId, 'Rated user ID');
+    if (collaborationId) {
+      validateObjectId(collaborationId as string, 'Collaboration ID');
+    }
+
+    const existingRating = await UserRating.findOne({
+      ratedUser: ratedUserId,
+      ratingUser: req.user._id,
+      collaborationId: collaborationId || null,
+    });
+
+    res.json({
+      exists: !!existingRating,
+      rating: existingRating || null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/ratings/:ratingId - Delete a rating
+router.delete('/:ratingId', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw createError('User not found', 404);
+    }
+
+    const { ratingId } = req.params;
+    validateObjectId(ratingId, 'Rating ID');
+
+    const rating = await UserRating.findById(ratingId);
+    if (!rating) {
+      throw createError('Rating not found', 404);
+    }
+
+    // Check if the current user is the one who gave the rating
+    if (rating.ratingUser.toString() !== req.user._id.toString()) {
+      throw createError('You can only delete your own ratings', 403);
+    }
+
+    const ratedUserId = rating.ratedUser.toString();
+    await rating.deleteOne();
+
+    // Update rated user's reputation after deletion
+    await updateUserReputation(ratedUserId);
+
+    res.json({
+      success: true,
+      message: 'Rating deleted successfully',
+    });
   } catch (error) {
     next(error);
   }
@@ -190,43 +256,6 @@ async function updateUserReputation(userId: string) {
 
   // Update trust badges
   await updateTrustBadges(userId);
-}
-
-// Helper function to update trust badges
-async function updateTrustBadges(userId: string) {
-  const user = await User.findById(userId);
-  if (!user) return;
-
-  const badges: string[] = [];
-
-  // Email verified
-  if (user.emailVerified) {
-    badges.push('email_verified');
-  }
-
-  // Resume uploaded
-  if (user.resumeUrl) {
-    badges.push('resume_uploaded');
-  }
-
-  // Active collaborator (has completed collaborations)
-  if (user.completedCollaborations >= 1) {
-    badges.push('active_collaborator');
-  }
-
-  // Idea creator (has created ideas)
-  const ideaCount = await Idea.countDocuments({ owner: userId });
-  if (ideaCount >= 1) {
-    badges.push('idea_creator');
-  }
-
-  // Top rated (average rating >= 4.5 with at least 3 ratings)
-  if (user.averageRating >= 4.5 && user.totalRatings >= 3) {
-    badges.push('top_rated');
-  }
-
-  user.trustBadges = badges;
-  await user.save();
 }
 
 export default router;

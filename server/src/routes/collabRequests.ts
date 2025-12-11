@@ -7,6 +7,7 @@ import { createError } from '../middleware/errorHandler';
 import { validateObjectId } from '../utils/validation';
 import { singleResumeUpload } from '../middleware/upload';
 import { uploadFile } from '../utils/storage';
+import { updateTrustBadges } from '../utils/trustBadges';
 
 const router = express.Router();
 
@@ -187,6 +188,9 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response, next: N
           await User.findByIdAndUpdate(senderId, {
             $inc: { completedCollaborations: 1 },
           });
+          
+          // Update trust badges for the sender
+          await updateTrustBadges(senderId);
         }
       }
     }

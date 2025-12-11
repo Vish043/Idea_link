@@ -18,6 +18,7 @@ import uploadRoutes from './routes/uploads';
 import ratingRoutes from './routes/ratings';
 import matchingRoutes from './routes/matching';
 import statsRoutes from './routes/stats';
+import emailVerificationRoutes from './routes/emailVerification';
 
 dotenv.config();
 
@@ -54,6 +55,7 @@ app.use('/api/uploads', uploadRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/matching', matchingRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/email-verification', emailVerificationRoutes);
 
 // Serve uploaded files statically (for direct file access, after route handlers)
 // This will handle files that don't match route patterns

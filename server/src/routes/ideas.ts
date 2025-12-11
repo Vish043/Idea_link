@@ -7,6 +7,7 @@ import { validateObjectId } from '../utils/validation';
 import { generateIdeaHash, createVersionEntry } from '../utils/ipProtection';
 import { ideaMediaUpload } from '../middleware/upload';
 import { uploadFile } from '../utils/storage';
+import { updateTrustBadges } from '../utils/trustBadges';
 
 const router = express.Router();
 
@@ -81,6 +82,9 @@ router.post('/', authMiddleware, ideaMediaUpload, async (req: Request, res: Resp
 
     await idea.save();
     await idea.populate('owner', 'name email avatarUrl');
+
+    // Update trust badges for idea creator
+    await updateTrustBadges(req.user._id.toString());
 
     res.status(201).json(idea);
   } catch (error) {

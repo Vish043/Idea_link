@@ -3,6 +3,7 @@ import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import { createError } from '../middleware/errorHandler';
 import { validateEmail, validateObjectId } from '../utils/validation';
+import { updateTrustBadges } from '../utils/trustBadges';
 
 const router = express.Router();
 
@@ -50,8 +51,19 @@ router.put('/me', authMiddleware, async (req: Request, res: Response, next: Next
       throw createError('User not found', 404);
     }
 
+    // Update trust badges if resume was uploaded
+    if (resumeUrl !== undefined) {
+      await updateTrustBadges(user._id.toString());
+      // Refresh user to get updated badges
+      const updatedUser = await User.findById(user._id).select('-passwordHash');
+      if (updatedUser) {
+        Object.assign(user, updatedUser);
+      }
+    }
+
     res.json({
       id: user._id,
+      _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
@@ -60,6 +72,12 @@ router.put('/me', authMiddleware, async (req: Request, res: Response, next: Next
       bio: user.bio,
       avatarUrl: user.avatarUrl,
       resumeUrl: user.resumeUrl,
+      reputationScore: user.reputationScore,
+      totalRatings: user.totalRatings,
+      averageRating: user.averageRating,
+      trustBadges: user.trustBadges,
+      completedCollaborations: user.completedCollaborations,
+      emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });
@@ -81,6 +99,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response, next: Nex
 
     res.json({
       id: user._id,
+      _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
@@ -89,6 +108,12 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response, next: Nex
       bio: user.bio,
       avatarUrl: user.avatarUrl,
       resumeUrl: user.resumeUrl,
+      reputationScore: user.reputationScore,
+      totalRatings: user.totalRatings,
+      averageRating: user.averageRating,
+      trustBadges: user.trustBadges,
+      completedCollaborations: user.completedCollaborations,
+      emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });

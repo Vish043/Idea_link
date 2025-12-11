@@ -113,18 +113,31 @@ router.get('/me', authMiddleware, async (req: Request, res: Response, next: Next
       throw createError('User not found', 404);
     }
 
+    // Fetch full user document to get all fields including reputation
+    const user = await User.findById(req.user._id).select('-passwordHash');
+    if (!user) {
+      throw createError('User not found', 404);
+    }
+
     res.json({
-      id: req.user._id,
-      name: req.user.name,
-      email: req.user.email,
-      role: req.user.role,
-      skills: req.user.skills,
-      interests: req.user.interests,
-      bio: req.user.bio,
-      avatarUrl: req.user.avatarUrl,
-      resumeUrl: req.user.resumeUrl,
-      createdAt: req.user.createdAt,
-      updatedAt: req.user.updatedAt,
+      id: user._id,
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      skills: user.skills,
+      interests: user.interests,
+      bio: user.bio,
+      avatarUrl: user.avatarUrl,
+      resumeUrl: user.resumeUrl,
+      reputationScore: user.reputationScore,
+      totalRatings: user.totalRatings,
+      averageRating: user.averageRating,
+      trustBadges: user.trustBadges,
+      completedCollaborations: user.completedCollaborations,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     });
   } catch (error) {
     next(error);
