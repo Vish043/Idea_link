@@ -4,7 +4,7 @@ import { NdaAgreement } from '../models/NdaAgreement';
 import { authMiddleware, verifyToken } from '../middleware/auth';
 import { createError } from '../middleware/errorHandler';
 import { validateObjectId } from '../utils/validation';
-import { generateIdeaHash, createVersionEntry } from '../utils/ipProtection';
+import { generateIdeaHash, createVersionEntry, generateIPCertificate } from '../utils/ipProtection';
 import { ideaMediaUpload } from '../middleware/upload';
 import { uploadFile } from '../utils/storage';
 import { updateTrustBadges } from '../utils/trustBadges';
@@ -82,6 +82,7 @@ router.post('/', authMiddleware, ideaMediaUpload, async (req: Request, res: Resp
 
     await idea.save();
     await idea.populate('owner', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified');
+    await idea.populate('versionHistory.changedBy', 'name email');
 
     // Update trust badges for idea creator
     await updateTrustBadges(req.user._id.toString());
@@ -144,7 +145,8 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
     const idea = await Idea.findById(id)
       .populate('owner', 'name email avatarUrl')
-      .populate('collaborators', 'name email avatarUrl');
+      .populate('collaborators', 'name email avatarUrl')
+      .populate('versionHistory.changedBy', 'name email');
 
     if (!idea) {
       throw createError('Idea not found', 404);
@@ -244,6 +246,11 @@ router.put('/:id', authMiddleware, ideaMediaUpload, async (req: Request, res: Re
       throw createError('Only the owner can update this idea', 403);
     }
 
+    // Check if idea is locked
+    if (idea.locked) {
+      throw createError('This idea is locked and cannot be edited', 403);
+    }
+
     const { title, shortSummary, description, tags, requiredSkills, visibility, status } = req.body;
 
     if (visibility && !['public', 'summary_with_protected_details'].includes(visibility)) {
@@ -320,7 +327,8 @@ router.put('/:id', authMiddleware, ideaMediaUpload, async (req: Request, res: Re
       { new: true, runValidators: true }
     )
       .populate('owner', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
-      .populate('collaborators', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified');
+      .populate('collaborators', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
+      .populate('versionHistory.changedBy', 'name email');
 
     res.json(updatedIdea);
   } catch (error) {
@@ -351,6 +359,75 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response, next: 
     await Idea.findByIdAndDelete(id);
 
     res.json({ message: 'Idea deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/ideas/:id/lock - Lock or unlock an idea
+router.patch('/:id/lock', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw createError('User not found', 404);
+    }
+
+    const { id } = req.params;
+    validateObjectId(id, 'Idea ID');
+
+    const { locked } = req.body;
+
+    if (typeof locked !== 'boolean') {
+      throw createError('locked field must be a boolean', 400);
+    }
+
+    const idea = await Idea.findById(id);
+    if (!idea) {
+      throw createError('Idea not found', 404);
+    }
+
+    // Check ownership
+    if (idea.owner.toString() !== req.user._id.toString()) {
+      throw createError('Only the owner can lock/unlock this idea', 403);
+    }
+
+    idea.locked = locked;
+    await idea.save();
+
+    res.json({
+      message: `Idea ${locked ? 'locked' : 'unlocked'} successfully`,
+      locked: idea.locked,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/ideas/:id/certificate
+router.get('/:id/certificate', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    validateObjectId(id, 'Idea ID');
+
+    const idea = await Idea.findById(id)
+      .populate('owner', 'name email');
+
+    if (!idea) {
+      throw createError('Idea not found', 404);
+    }
+
+    const certificate = generateIPCertificate({
+      title: idea.title,
+      ideaHash: idea.ideaHash,
+      createdAt: idea.createdAt,
+      owner: {
+        name: (idea.owner as any).name || 'Unknown',
+        email: (idea.owner as any).email || 'Unknown',
+      },
+    });
+
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename="idea-certificate-${idea._id}.txt"`);
+    res.send(certificate);
   } catch (error) {
     next(error);
   }
