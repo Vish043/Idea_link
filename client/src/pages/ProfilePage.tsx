@@ -3,8 +3,6 @@ import { useToast } from '../hooks/useToast';
 import api, { getFileUrl } from '../utils/api';
 import { getImageUrl } from '../utils/imageUtils';
 import PDFViewerModal from '../components/PDFViewerModal';
-import TrustBadges from '../components/TrustBadges';
-import ReputationDisplay from '../components/ReputationDisplay';
 import UserRatingsList from '../components/UserRatingsList';
 import QualityIndicators from '../components/QualityIndicators';
 
