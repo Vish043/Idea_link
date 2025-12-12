@@ -135,6 +135,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response, next: Next
       averageRating: user.averageRating,
       trustBadges: user.trustBadges,
       completedCollaborations: user.completedCollaborations,
+      responseRate: user.responseRate,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,

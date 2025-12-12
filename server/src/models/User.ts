@@ -17,6 +17,9 @@ export interface IUser extends Document {
   verified: boolean;
   trustBadges: string[];
   completedCollaborations: number;
+  collaborationRequestsReceived: number;
+  collaborationRequestsResponded: number;
+  responseRate: number;
   // IP Protection
   emailVerified: boolean;
   createdAt: Date;
@@ -96,6 +99,23 @@ const UserSchema = new Schema<IUser>(
       type: Number,
       default: 0,
       min: 0,
+    },
+    // Response rate tracking for collaboration requests
+    collaborationRequestsReceived: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    collaborationRequestsResponded: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    responseRate: {
+      type: Number,
+      default: 100, // Default to 100% (no requests = perfect response)
+      min: 0,
+      max: 100,
     },
     emailVerified: {
       type: Boolean,

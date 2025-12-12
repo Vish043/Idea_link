@@ -11,6 +11,26 @@ import { updateTrustBadges } from '../utils/trustBadges';
 
 const router = express.Router();
 
+// Helper function to update response rate
+async function updateResponseRate(userId: string) {
+  const user = await User.findById(userId);
+  if (!user) return;
+
+  const received = user.collaborationRequestsReceived || 0;
+  const responded = user.collaborationRequestsResponded || 0;
+
+  // Calculate response rate (0-100%)
+  // If no requests received, default to 100% (perfect response)
+  let responseRate = 100;
+  if (received > 0) {
+    responseRate = Math.round((responded / received) * 100);
+  }
+
+  await User.findByIdAndUpdate(userId, {
+    responseRate: Math.min(Math.max(responseRate, 0), 100),
+  });
+}
+
 // POST /api/collab-requests
 router.post('/', authMiddleware, (req: Request, res: Response, next: NextFunction) => {
   singleResumeUpload(req, res, async (err: any) => {
@@ -80,7 +100,17 @@ router.post('/', authMiddleware, (req: Request, res: Response, next: NextFunctio
         status: 'pending',
       });
 
-    await collabRequest.save();
+      await collabRequest.save();
+      
+      // Increment collaboration requests received for idea owner
+      const ideaOwnerId = idea.owner.toString();
+      await User.findByIdAndUpdate(ideaOwnerId, {
+        $inc: { collaborationRequestsReceived: 1 },
+      });
+      
+      // Update response rate for idea owner
+      await updateResponseRate(ideaOwnerId);
+      
       await collabRequest.populate('idea', 'title owner');
       await collabRequest.populate('sender', 'name email avatarUrl');
 
@@ -107,7 +137,7 @@ router.get('/mine', authMiddleware, async (req: Request, res: Response, next: Ne
       idea: { $in: ideaIds },
     })
       .populate('idea', 'title shortSummary')
-      .populate('sender', 'name email avatarUrl skills interests reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
+      .populate('sender', 'name email avatarUrl skills interests reputationScore averageRating totalRatings trustBadges completedCollaborations responseRate emailVerified')
       .sort({ createdAt: -1 });
 
     res.json(requests);
@@ -128,7 +158,7 @@ router.get('/sent', authMiddleware, async (req: Request, res: Response, next: Ne
       sender: req.user._id,
     })
       .populate('idea', 'title shortSummary owner')
-      .populate('idea.owner', 'name reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
+      .populate('idea.owner', 'name reputationScore averageRating totalRatings trustBadges completedCollaborations responseRate emailVerified')
       .sort({ createdAt: -1 });
 
     res.json(requests);
@@ -175,6 +205,15 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response, next: N
     collabRequest.status = status;
     await collabRequest.save();
 
+    // Increment collaboration requests responded for idea owner
+    const ideaOwnerId = idea.owner.toString();
+    await User.findByIdAndUpdate(ideaOwnerId, {
+      $inc: { collaborationRequestsResponded: 1 },
+    });
+    
+    // Update response rate for idea owner
+    await updateResponseRate(ideaOwnerId);
+
     // If accepted, add sender to idea collaborators and update metrics
     if (status === 'accepted') {
       const ideaDoc = await Idea.findById(idea._id);
@@ -189,8 +228,10 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response, next: N
             $inc: { completedCollaborations: 1 },
           });
           
-          // Update trust badges for the sender
-          await updateTrustBadges(senderId);
+          // Update reputation (includes collaboration count) and trust badges
+          // Reputation automatically recalculated with collaboration bonus
+          const { updateUserReputation } = await import('../routes/ratings');
+          await updateUserReputation(senderId);
         }
       }
     }

@@ -81,7 +81,7 @@ router.post('/', authMiddleware, ideaMediaUpload, async (req: Request, res: Resp
     });
 
     await idea.save();
-    await idea.populate('owner', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified');
+    await idea.populate('owner', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations responseRate emailVerified');
     await idea.populate('versionHistory.changedBy', 'name email');
 
     // Update trust badges for idea creator
@@ -127,8 +127,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     const ideas = await Idea.find(query)
-      .populate('owner', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
-      .populate('collaborators', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
+      .populate('owner', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations responseRate emailVerified')
+      .populate('collaborators', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations responseRate emailVerified')
       .sort({ createdAt: -1 });
 
     res.json(ideas);
@@ -326,8 +326,8 @@ router.put('/:id', authMiddleware, ideaMediaUpload, async (req: Request, res: Re
       updateData,
       { new: true, runValidators: true }
     )
-      .populate('owner', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
-      .populate('collaborators', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations emailVerified')
+      .populate('owner', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations responseRate emailVerified')
+      .populate('collaborators', 'name email avatarUrl reputationScore averageRating totalRatings trustBadges completedCollaborations responseRate emailVerified')
       .populate('versionHistory.changedBy', 'name email');
 
     res.json(updatedIdea);

@@ -42,6 +42,30 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
       throw createError('User not found', 404);
     }
 
+    // If collaborationId is provided, verify the collaboration exists and both users are involved
+    if (collaborationId) {
+      const idea = await Idea.findById(collaborationId);
+      if (!idea) {
+        throw createError('Collaboration idea not found', 404);
+      }
+
+      // Verify that both users are involved in the collaboration
+      const isOwner = idea.owner.toString() === req.user._id.toString();
+      const isCollaborator = idea.collaborators.some(
+        (id) => id.toString() === req.user._id.toString()
+      );
+      const ratedUserIsOwner = idea.owner.toString() === ratedUserId;
+      const ratedUserIsCollaborator = idea.collaborators.some(
+        (id) => id.toString() === ratedUserId
+      );
+
+      // The rating user must be owner or collaborator, and the rated user must be the other party
+      if (!((isOwner && (ratedUserIsCollaborator || ratedUserIsOwner)) || 
+            (isCollaborator && ratedUserIsOwner))) {
+        throw createError('You can only rate users you have collaborated with on this idea', 403);
+      }
+    }
+
     // Check for existing rating for this collaboration
     const existingRating = await UserRating.findOne({
       ratedUser: ratedUserId,
@@ -216,45 +240,63 @@ router.post('/idea/:ideaId', authMiddleware, async (req: Request, res: Response,
 });
 
 // Helper function to update user reputation
-async function updateUserReputation(userId: string) {
+// Reputation is automatically recalculated after each rating
+// Score components: ratings, number of collaborations, category scores
+export async function updateUserReputation(userId: string) {
+  const user = await User.findById(userId);
+  if (!user) return;
+
   const ratings = await UserRating.find({ ratedUser: userId });
   
-  if (ratings.length === 0) return;
+  let averageRating = 0;
+  let totalRatings = 0;
+  let reputationScore = 0;
 
-  const totalRatings = ratings.length;
-  const sumRatings = ratings.reduce((sum, r) => sum + r.rating, 0);
-  const averageRating = sumRatings / totalRatings;
+  // Component 1: Rating-based score (0-50 points)
+  if (ratings.length > 0) {
+    totalRatings = ratings.length;
+    const sumRatings = ratings.reduce((sum, r) => sum + r.rating, 0);
+    averageRating = sumRatings / totalRatings;
+    reputationScore = averageRating * 10; // Base score from rating (0-50)
+    
+    // Component 2: Number of ratings bonus (up to 20 points)
+    // More ratings = more reliable reputation
+    const ratingBonus = Math.min(totalRatings * 1.5, 20);
+    reputationScore += ratingBonus;
 
-  // Calculate reputation score (0-100)
-  // Based on: average rating, number of ratings, category scores
-  let reputationScore = averageRating * 10; // Base score from rating (0-50)
-  
-  // Bonus for number of ratings (up to 30 points)
-  const ratingBonus = Math.min(totalRatings * 2, 30);
-  reputationScore += ratingBonus;
+    // Component 3: Category scores bonus (up to 15 points)
+    // Average of all category ratings
+    const categoryScores = ratings.reduce(
+      (sum, r) =>
+        sum +
+        (r.categories.communication +
+          r.categories.reliability +
+          r.categories.skill +
+          r.categories.professionalism) /
+          4,
+      0
+    );
+    const avgCategoryScore = categoryScores / totalRatings;
+    const categoryBonus = Math.min((avgCategoryScore / 5) * 15, 15);
+    reputationScore += categoryBonus;
+  }
 
-  // Bonus for category scores (up to 20 points)
-  const categoryScores = ratings.reduce(
-    (sum, r) =>
-      sum +
-      (r.categories.communication +
-        r.categories.reliability +
-        r.categories.skill +
-        r.categories.professionalism) /
-        4,
-    0
-  );
-  const categoryBonus = Math.min((categoryScores / totalRatings / 5) * 20, 20);
-  reputationScore += categoryBonus;
+  // Component 4: Completed collaborations bonus (up to 15 points)
+  // More collaborations = more experience and trust
+  const collaborationBonus = Math.min(user.completedCollaborations * 1.5, 15);
+  reputationScore += collaborationBonus;
+
+  // Ensure score is within 0-100 range
+  reputationScore = Math.min(Math.max(reputationScore, 0), 100);
 
   // Update user
   await User.findByIdAndUpdate(userId, {
-    averageRating,
+    averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
     totalRatings,
     reputationScore: Math.round(reputationScore),
   });
 
-  // Update trust badges
+  // Update trust badges (rewards good behavior)
   await updateTrustBadges(userId);
 }
 
