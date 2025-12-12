@@ -16,6 +16,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
       throw createError('User not found', 404);
     }
 
+    const currentUser = req.user; // Store for TypeScript type narrowing
+
     const { ratedUserId, collaborationId, rating, comment, categories } = req.body;
 
     if (!ratedUserId || !rating) {
@@ -32,7 +34,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
     }
 
     // Can't rate yourself
-    if (ratedUserId === req.user._id.toString()) {
+    if (ratedUserId === currentUser._id.toString()) {
       throw createError('Cannot rate yourself', 400);
     }
 
@@ -50,9 +52,9 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
       }
 
       // Verify that both users are involved in the collaboration
-      const isOwner = idea.owner.toString() === req.user._id.toString();
+      const isOwner = idea.owner.toString() === currentUser._id.toString();
       const isCollaborator = idea.collaborators.some(
-        (id) => id.toString() === req.user._id.toString()
+        (id) => id.toString() === currentUser._id.toString()
       );
       const ratedUserIsOwner = idea.owner.toString() === ratedUserId;
       const ratedUserIsCollaborator = idea.collaborators.some(
@@ -69,7 +71,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
     // Check for existing rating for this collaboration
     const existingRating = await UserRating.findOne({
       ratedUser: ratedUserId,
-      ratingUser: req.user._id,
+      ratingUser: currentUser._id,
       collaborationId: collaborationId || null,
     });
 
@@ -80,7 +82,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
     // Create rating
     const newRating = new UserRating({
       ratedUser: ratedUserId,
-      ratingUser: req.user._id,
+      ratingUser: currentUser._id,
       collaborationId: collaborationId || undefined,
       rating,
       comment: comment || undefined,
