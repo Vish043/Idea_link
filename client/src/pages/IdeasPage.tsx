@@ -44,6 +44,18 @@ interface Idea {
   }>;
   createdAt: string;
   updatedAt: string;
+  ideaHash?: string;
+  locked?: boolean;
+  versionHistory?: Array<{
+    version: number;
+    content: string;
+    timestamp: string;
+    changedBy: {
+      _id: string;
+      name: string;
+      email: string;
+    } | string;
+  }>;
 }
 
 export default function IdeasPage() {
@@ -313,6 +325,12 @@ export default function IdeasPage() {
       const response = await api.get(`/ideas/${ideaId}`);
       const idea = response.data;
       
+      // Check if idea is locked
+      if (idea.locked) {
+        showError('This idea is locked and cannot be edited. Please unlock it first.');
+        return;
+      }
+      
       setEditingIdeaId(ideaId);
       setFormData({
         title: idea.title || '',
@@ -369,6 +387,22 @@ export default function IdeasPage() {
       showError(errorMessage);
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleLockIdea = async (ideaId: string, lock: boolean) => {
+    try {
+      await api.patch(`/ideas/${ideaId}/lock`, { locked: lock });
+      showSuccess(`Idea ${lock ? 'locked' : 'unlocked'} successfully`);
+      fetchIdeas();
+      // Update selected idea if it's the one being locked
+      if (selectedIdea?._id === ideaId) {
+        const response = await api.get(`/ideas/${ideaId}`);
+        setSelectedIdea(response.data);
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || `Failed to ${lock ? 'lock' : 'unlock'} idea`;
+      showError(errorMessage);
     }
   };
 
@@ -827,14 +861,21 @@ export default function IdeasPage() {
                 )}
                 {isOwner(idea) && (
                   <div className="mt-3 pt-3 border-t border-gray-200 flex flex-col gap-2">
+                    {idea.locked && (
+                      <div className="px-3 py-1.5 bg-yellow-100 text-yellow-800 text-xs rounded-md text-center font-semibold">
+                        🔒 Locked
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEditIdea(idea._id);
                       }}
-                      className="w-full px-3 py-2.5 sm:py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors min-h-[44px] sm:min-h-0"
+                      disabled={idea.locked}
+                      className="w-full px-3 py-2.5 sm:py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0"
+                      title={idea.locked ? 'This idea is locked and cannot be edited' : 'Edit this idea'}
                     >
-                      Edit Idea
+                      {idea.locked ? '🔒 Locked - Cannot Edit' : 'Edit Idea'}
                     </button>
                     <button
                       onClick={(e) => {
@@ -1135,7 +1176,14 @@ export default function IdeasPage() {
               <div className="p-4 sm:p-6">
                 <div className="flex justify-between items-start mb-4 sm:mb-6 gap-2">
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 break-words">{selectedIdea.title}</h2>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{selectedIdea.title}</h2>
+                      {selectedIdea.locked && (
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-semibold flex items-center gap-1" title="This idea is locked and cannot be edited">
+                          🔒 Locked
+                        </span>
+                      )}
+                    </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -1203,6 +1251,114 @@ export default function IdeasPage() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
                     <p className="text-gray-700 whitespace-pre-wrap">{selectedIdea.description}</p>
                   </div>
+
+                  {/* IP Protection Hash - Only visible to owner */}
+                  {isOwner(selectedIdea) && selectedIdea.ideaHash && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                          <span>🔒</span>
+                          <span>IP Protection Hash</span>
+                        </h3>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const token = localStorage.getItem('token');
+                              const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                              const response = await fetch(`${apiUrl}/ideas/${selectedIdea._id}/certificate`, {
+                                headers: {
+                                  Authorization: `Bearer ${token}`,
+                                },
+                              });
+                              
+                              if (response.ok) {
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `idea-certificate-${selectedIdea._id}.txt`;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                                showSuccess('Certificate downloaded successfully');
+                              } else {
+                                showError('Failed to download certificate');
+                              }
+                            } catch (err) {
+                              showError('Failed to download certificate');
+                            }
+                          }}
+                          className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                        >
+                          📄 Download Certificate
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2">
+                        This SHA-256 hash serves as cryptographic proof of ownership at the time of creation. 
+                        It includes the idea title, description, owner ID, and creation timestamp.
+                      </p>
+                      <div className="bg-white border border-gray-300 rounded p-3 font-mono text-xs break-all">
+                        <span className="text-gray-500">Hash: </span>
+                        <span className="text-gray-900">{selectedIdea.ideaHash}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Created: {new Date(selectedIdea.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Version History - Only visible to owner */}
+                  {isOwner(selectedIdea) && selectedIdea.versionHistory && selectedIdea.versionHistory.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <span>📝</span>
+                        <span>Version History</span>
+                        <span className="text-sm font-normal text-gray-600">
+                          ({selectedIdea.versionHistory.length} version{selectedIdea.versionHistory.length !== 1 ? 's' : ''})
+                        </span>
+                      </h3>
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {[...selectedIdea.versionHistory].reverse().map((version, idx) => {
+                          const changedBy = typeof version.changedBy === 'object' 
+                            ? version.changedBy 
+                            : { name: 'Unknown', email: '' };
+                          return (
+                            <div
+                              key={idx}
+                              className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow"
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-xs font-semibold">
+                                    Version {version.version}
+                                  </span>
+                                  {version.version === selectedIdea.versionHistory?.length && (
+                                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-semibold">
+                                      Current
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(version.timestamp).toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="mb-2">
+                                <p className="text-xs text-gray-600 mb-1">
+                                  Changed by: <span className="font-semibold text-gray-900">{changedBy.name}</span>
+                                </p>
+                              </div>
+                              <div className="bg-gray-50 border border-gray-200 rounded p-2">
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-3">
+                                  {version.content}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Images */}
                   {selectedIdea.images && selectedIdea.images.length > 0 && (
@@ -1328,9 +1484,22 @@ export default function IdeasPage() {
                       <>
                         <button
                           onClick={() => handleEditIdea(selectedIdea._id)}
-                          className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                          disabled={selectedIdea.locked}
+                          className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={selectedIdea.locked ? 'This idea is locked and cannot be edited' : 'Edit this idea'}
                         >
-                          Edit Idea
+                          {selectedIdea.locked ? '🔒 Locked - Cannot Edit' : 'Edit Idea'}
+                        </button>
+                        <button
+                          onClick={() => handleLockIdea(selectedIdea._id, !selectedIdea.locked)}
+                          className={`w-full sm:w-auto px-4 py-2 rounded-md transition-colors ${
+                            selectedIdea.locked
+                              ? 'bg-green-600 text-white hover:bg-green-700'
+                              : 'bg-yellow-600 text-white hover:bg-yellow-700'
+                          }`}
+                          title={selectedIdea.locked ? 'Unlock this idea to allow edits' : 'Lock this idea to prevent edits'}
+                        >
+                          {selectedIdea.locked ? '🔓 Unlock Idea' : '🔒 Lock Idea'}
                         </button>
                         <button
                           onClick={() => handleDeleteIdea(selectedIdea._id)}
