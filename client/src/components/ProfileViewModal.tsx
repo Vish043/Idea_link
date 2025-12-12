@@ -5,6 +5,7 @@ import { getImageUrl } from '../utils/imageUtils';
 import PDFViewerModal from './PDFViewerModal';
 import TrustBadges from './TrustBadges';
 import ReputationDisplay from './ReputationDisplay';
+import QualityIndicators from './QualityIndicators';
 
 interface User {
   id: string;
@@ -22,6 +23,7 @@ interface User {
   averageRating?: number;
   trustBadges?: string[];
   completedCollaborations?: number;
+  responseRate?: number;
   emailVerified?: boolean;
 }
 
@@ -108,20 +110,18 @@ export default function ProfileViewModal({ userId, isOpen, onClose, onStartChat 
                   <span className="inline-block mt-2 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs sm:text-sm">
                     {user.role}
                   </span>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <ReputationDisplay
-                      reputationScore={user.reputationScore || 0}
-                      averageRating={user.averageRating || 0}
-                      totalRatings={user.totalRatings || 0}
+                  <div className="mt-2">
+                    <QualityIndicators
+                      reputationScore={user.reputationScore}
+                      averageRating={user.averageRating}
+                      totalRatings={user.totalRatings}
+                      completedCollaborations={user.completedCollaborations}
+                      responseRate={user.responseRate}
+                      trustBadges={user.trustBadges}
+                      emailVerified={user.emailVerified}
                       size="sm"
                     />
-                    <TrustBadges badges={user.trustBadges || []} size="sm" />
                   </div>
-                  {user.completedCollaborations !== undefined && user.completedCollaborations > 0 && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {user.completedCollaborations} completed collaboration{user.completedCollaborations !== 1 ? 's' : ''}
-                    </p>
-                  )}
                 </div>
               </div>
 

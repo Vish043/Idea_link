@@ -6,6 +6,7 @@ import PDFViewerModal from '../components/PDFViewerModal';
 import TrustBadges from '../components/TrustBadges';
 import ReputationDisplay from '../components/ReputationDisplay';
 import UserRatingsList from '../components/UserRatingsList';
+import QualityIndicators from '../components/QualityIndicators';
 
 interface User {
   id: string;
@@ -23,6 +24,7 @@ interface User {
   averageRating?: number;
   trustBadges?: string[];
   completedCollaborations?: number;
+  responseRate?: number;
   emailVerified?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -284,19 +286,17 @@ export default function ProfilePage() {
             <div className="flex-1">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Profile</h1>
               {!editing && user && (
-                <div className="flex flex-wrap items-center gap-3 mt-2">
-                  <ReputationDisplay
-                    reputationScore={user.reputationScore || 0}
-                    averageRating={user.averageRating || 0}
-                    totalRatings={user.totalRatings || 0}
+                <div className="mt-2">
+                  <QualityIndicators
+                    reputationScore={user.reputationScore}
+                    averageRating={user.averageRating}
+                    totalRatings={user.totalRatings}
+                    completedCollaborations={user.completedCollaborations}
+                    responseRate={user.responseRate}
+                    trustBadges={user.trustBadges}
+                    emailVerified={user.emailVerified}
                     size="md"
                   />
-                  <TrustBadges badges={user.trustBadges || []} size="sm" />
-                  {user.completedCollaborations !== undefined && user.completedCollaborations > 0 && (
-                    <span className="text-sm text-gray-600">
-                      {user.completedCollaborations} completed collaboration{user.completedCollaborations !== 1 ? 's' : ''}
-                    </span>
-                  )}
                 </div>
               )}
             </div>
