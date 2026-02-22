@@ -14,7 +14,7 @@ import collabRequestRoutes from './routes/collabRequests';
 import ndaRoutes from './routes/nda';
 import taskRoutes from './routes/tasks';
 import messageRoutes from './routes/messages';
-import uploadRoutes from './routes/uploads';
+import uploadRoutes from './routes/uploadsCloudinary';
 import ratingRoutes from './routes/ratings';
 import matchingRoutes from './routes/matching';
 import statsRoutes from './routes/stats';
