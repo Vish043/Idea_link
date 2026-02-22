@@ -65,7 +65,10 @@ export default function ChatModal({
     }
 
     // Initialize Socket.IO connection
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    // Extract base URL from VITE_API_URL if possible, otherwise fallback
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || apiUrl.replace(/\/api$/, '');
+
     const newSocket = io(socketUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],
@@ -98,7 +101,7 @@ export default function ChatModal({
           console.log('Message already exists, skipping');
           return prev;
         }
-        
+
         // For personal chat, filter messages to only show those in this conversation
         if (type === 'personal' && userId) {
           // If currentUserId is not set yet, still allow messages from the other user
@@ -113,30 +116,30 @@ export default function ChatModal({
             console.log('Skipping message - not from other user and currentUserId not set');
             return prev;
           }
-          
+
           // Message should be either:
           // 1. From the other user (userId) to current user
           // 2. From current user to the other user (userId)
           const isFromOtherUser = message.sender._id === userId;
           const isFromCurrentUser = message.sender._id === currentUserId;
-          
-          console.log('Message check:', { 
-            isFromOtherUser, 
-            isFromCurrentUser, 
-            senderId: message.sender._id, 
-            userId, 
-            currentUserId 
+
+          console.log('Message check:', {
+            isFromOtherUser,
+            isFromCurrentUser,
+            senderId: message.sender._id,
+            userId,
+            currentUserId
           });
-          
+
           // Only add if it's part of this conversation
           if (!isFromOtherUser && !isFromCurrentUser) {
             console.log('Message not part of this conversation, skipping');
             return prev; // Not a message in this conversation
           }
-          
+
           console.log('Adding message to conversation');
         }
-        
+
         // For group chat, all messages are valid
         return [...prev, message];
       });
@@ -176,16 +179,16 @@ export default function ChatModal({
       } else {
         return;
       }
-      
+
       // Remove duplicates and sort by creation time
       const uniqueMessages = response.data
-        .filter((msg: Message, index: number, self: Message[]) => 
+        .filter((msg: Message, index: number, self: Message[]) =>
           index === self.findIndex((m) => m._id === msg._id)
         )
-        .sort((a: Message, b: Message) => 
+        .sort((a: Message, b: Message) =>
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
-      
+
       setMessages(uniqueMessages);
       setTimeout(() => scrollToBottom(), 100);
     } catch (err: any) {
@@ -259,11 +262,10 @@ export default function ChatModal({
                   className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-lg ${
-                      isOwnMessage
+                    className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-lg ${isOwnMessage
                         ? 'bg-indigo-600 text-white'
                         : 'bg-white text-gray-900 border border-gray-200'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       {!isOwnMessage && (
