@@ -4,7 +4,7 @@ import { NdaAgreement } from '../models/NdaAgreement';
 import { authMiddleware, verifyToken } from '../middleware/auth';
 import { createError } from '../middleware/errorHandler';
 import { validateObjectId } from '../utils/validation';
-import { generateIdeaHash, createVersionEntry, generateIPCertificate } from '../utils/ipProtection';
+import { generateIdeaHash, createVersionEntry, generateIPCertificate, verifyIdeaIntegrity } from '../utils/ipProtection';
 import { ideaMediaUpload } from '../middleware/upload';
 import { uploadFile } from '../utils/storage';
 import { updateTrustBadges } from '../utils/trustBadges';
@@ -34,8 +34,18 @@ router.post('/', authMiddleware, ideaMediaUpload, async (req: Request, res: Resp
 
     const now = new Date();
     
-    // Generate IP protection hash
-    const ideaHash = generateIdeaHash(title, description, req.user._id.toString(), now);
+    // Generate IP protection hash with comprehensive data
+    const ideaHash = generateIdeaHash(
+      title,
+      description,
+      req.user._id.toString(),
+      now,
+      {
+        tags: tags || [],
+        requiredSkills: requiredSkills || [],
+        shortSummary,
+      }
+    );
 
     // Handle image uploads
     const imageUrls: string[] = [];
@@ -402,32 +412,99 @@ router.patch('/:id/lock', authMiddleware, async (req: Request, res: Response, ne
   }
 });
 
-// GET /api/ideas/:id/certificate
+// GET /api/ideas/:id/verify - Verify idea integrity
+router.get('/:id/verify', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    validateObjectId(id, 'Idea ID');
+
+    const idea = await Idea.findById(id);
+    if (!idea) {
+      throw createError('Idea not found', 404);
+    }
+
+    const isValid = verifyIdeaIntegrity({
+      title: idea.title,
+      description: idea.description,
+      owner: idea.owner,
+      createdAt: idea.createdAt,
+      ideaHash: idea.ideaHash,
+      tags: idea.tags,
+      requiredSkills: idea.requiredSkills,
+      shortSummary: idea.shortSummary,
+    });
+
+    res.json({
+      success: true,
+      valid: isValid,
+      message: isValid
+        ? 'Idea integrity verified. The idea has not been tampered with.'
+        : 'Idea integrity check failed. The idea may have been modified.',
+      ideaId: idea._id.toString(),
+      hash: idea.ideaHash,
+      verifiedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/ideas/:id/certificate - Get IP protection certificate
 router.get('/:id/certificate', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     validateObjectId(id, 'Idea ID');
 
     const idea = await Idea.findById(id)
-      .populate('owner', 'name email');
+      .populate('owner', 'name email')
+      .populate('versionHistory.changedBy', 'name email');
 
     if (!idea) {
       throw createError('Idea not found', 404);
     }
 
+    // Generate comprehensive certificate with all idea data
     const certificate = generateIPCertificate({
+      _id: idea._id.toString(),
       title: idea.title,
+      shortSummary: idea.shortSummary,
       ideaHash: idea.ideaHash,
       createdAt: idea.createdAt,
+      updatedAt: idea.updatedAt,
       owner: {
         name: (idea.owner as any).name || 'Unknown',
         email: (idea.owner as any).email || 'Unknown',
       },
+      tags: idea.tags,
+      requiredSkills: idea.requiredSkills,
+      versionHistory: idea.versionHistory.map((v: any) => ({
+        version: v.version,
+        timestamp: v.timestamp,
+        changedBy: v.changedBy ? {
+          name: (v.changedBy as any).name || 'Unknown',
+          email: (v.changedBy as any).email || 'Unknown',
+        } : 'Unknown',
+      })),
+      locked: idea.locked,
+      status: idea.status,
     });
 
-    res.setHeader('Content-Type', 'text/plain');
-    res.setHeader('Content-Disposition', `attachment; filename="idea-certificate-${idea._id}.txt"`);
-    res.send(certificate);
+    // Return JSON for frontend display, or text if download requested
+    const download = req.query.download === 'true';
+    const format = req.query.format || 'full'; // 'full' or 'simple'
+    
+    if (download) {
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Disposition', `attachment; filename="IP-Certificate-${idea._id}-${Date.now()}.txt"`);
+      res.send(certificate);
+    } else {
+      res.json({
+        success: true,
+        certificate,
+        ideaId: idea._id.toString(),
+        generatedAt: new Date().toISOString(),
+      });
+    }
   } catch (error) {
     next(error);
   }

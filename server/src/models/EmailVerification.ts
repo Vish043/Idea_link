@@ -32,7 +32,6 @@ const EmailVerificationSchema = new Schema<IEmailVerification>(
 );
 
 // Index for efficient queries
-EmailVerificationSchema.index({ token: 1 });
 EmailVerificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export const EmailVerification = mongoose.model<IEmailVerification>(

@@ -532,29 +532,44 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Skills */}
+              {/* Skills - Visual Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
                   Skills
+                  {formData.skills && formData.skills.length > 0 && (
+                    <span className="text-xs text-gray-500 font-normal">
+                      ({formData.skills.length} skill{formData.skills.length !== 1 ? 's' : ''})
+                    </span>
+                  )}
                 </label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {formData.skills?.map((skill, idx) => (
                     <span
                       key={idx}
-                      className="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm"
+                      className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-indigo-100 to-blue-100 text-indigo-800 rounded-full text-sm font-medium border border-indigo-200 shadow-sm"
                     >
+                      <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
                       {skill}
                       {editing && (
                         <button
                           type="button"
                           onClick={() => handleRemoveSkill(skill)}
-                          className="ml-2 text-indigo-600 hover:text-indigo-800"
+                          className="ml-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-200 rounded-full p-0.5 transition-colors"
+                          title="Remove skill"
                         >
                           ×
                         </button>
                       )}
                     </span>
                   ))}
+                  {(!formData.skills || formData.skills.length === 0) && !editing && (
+                    <p className="text-sm text-gray-500 italic">No skills added yet</p>
+                  )}
                 </div>
                 {editing && (
                   <div className="flex gap-2">

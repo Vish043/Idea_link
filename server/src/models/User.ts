@@ -93,7 +93,43 @@ const UserSchema = new Schema<IUser>(
     trustBadges: {
       type: [String],
       default: [],
-      enum: ['email_verified', 'resume_uploaded', 'active_collaborator', 'idea_creator', 'top_rated'],
+      enum: [
+        // Basic verification
+        'email_verified',
+        'resume_uploaded',
+        // Collaboration badges
+        'active_collaborator',
+        'collaboration_milestone_10',
+        'collaboration_milestone_25',
+        'collaboration_milestone_50',
+        'collaboration_milestone_100',
+        'veteran_collaborator',
+        // Idea creation badges
+        'idea_creator',
+        'prolific_creator',
+        'idea_master',
+        // Rating badges
+        'top_rated',
+        'excellent_rated',
+        'highly_rated',
+        'well_rated',
+        'rising_star',
+        // Response rate badges
+        'excellent_response_rate',
+        'good_response_rate',
+        // Consistency badges
+        'consistent_performer',
+        // Reputation tier badges
+        'reputation_elite',
+        'reputation_excellent',
+        'reputation_good',
+        'reputation_established',
+        // Category excellence badges
+        'excellent_communicator',
+        'highly_reliable',
+        'skilled_professional',
+        'professional',
+      ],
     },
     completedCollaborations: {
       type: Number,

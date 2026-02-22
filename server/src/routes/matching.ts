@@ -9,6 +9,7 @@ import { getRecommendedCollaborators, getRecommendedIdeas } from '../utils/match
 const router = express.Router();
 
 // GET /api/matching/idea/:ideaId/collaborators - Get recommended collaborators for an idea
+// Query params: minScore (optional) - Minimum match score threshold (0-1)
 router.get(
   '/idea/:ideaId/collaborators',
   authMiddleware,
@@ -20,6 +21,12 @@ router.get(
 
       const { ideaId } = req.params;
       validateObjectId(ideaId, 'Idea ID');
+
+      // Optional filtering: minimum match score (0-1)
+      const minScore = req.query.minScore ? parseFloat(req.query.minScore as string) : 0;
+      if (isNaN(minScore) || minScore < 0 || minScore > 1) {
+        throw createError('Invalid minScore parameter. Must be between 0 and 1', 400);
+      }
 
       const idea = await Idea.findById(ideaId).populate('owner');
       if (!idea) {
@@ -35,10 +42,18 @@ router.get(
       const allUsers = await User.find({ _id: { $ne: req.user._id } });
 
       // Get recommendations
-      const recommendations = await getRecommendedCollaborators(idea, allUsers, 20);
+      let recommendations = await getRecommendedCollaborators(idea, allUsers, 20);
+
+      // Filtered Results: Only show relevant matches above threshold
+      if (minScore > 0) {
+        recommendations = recommendations.filter((r) => r.score >= minScore);
+      }
 
       res.json({
         success: true,
+        totalCount: recommendations.length,
+        filtered: minScore > 0,
+        minScore: minScore > 0 ? minScore : undefined,
         recommendations: recommendations.map((r) => ({
           user: {
             _id: r.user._id,
@@ -56,6 +71,7 @@ router.get(
           },
           matchScore: r.score,
           reasons: r.reasons,
+          breakdown: r.breakdown, // Transparent scoring breakdown
         })),
       });
     } catch (error) {
@@ -65,6 +81,7 @@ router.get(
 );
 
 // GET /api/matching/user/ideas - Get recommended ideas for current user
+// Query params: minScore (optional) - Minimum match score threshold (0-1)
 router.get(
   '/user/ideas',
   authMiddleware,
@@ -79,16 +96,30 @@ router.get(
         throw createError('User not found', 404);
       }
 
+      // Optional filtering: minimum match score (0-1)
+      const minScore = req.query.minScore ? parseFloat(req.query.minScore as string) : 0;
+      if (isNaN(minScore) || minScore < 0 || minScore > 1) {
+        throw createError('Invalid minScore parameter. Must be between 0 and 1', 400);
+      }
+
       // Get all ideas looking for collaborators
       const allIdeas = await Idea.find({ status: 'looking_for_collaborators' })
         .populate('owner', 'name avatarUrl')
         .populate('collaborators', 'name');
 
       // Get recommendations
-      const recommendations = await getRecommendedIdeas(user, allIdeas, 20);
+      let recommendations = await getRecommendedIdeas(user, allIdeas, 20);
+
+      // Filtered Results: Only show relevant matches above threshold
+      if (minScore > 0) {
+        recommendations = recommendations.filter((idea) => idea.matchScore >= minScore);
+      }
 
       res.json({
         success: true,
+        totalCount: recommendations.length,
+        filtered: minScore > 0,
+        minScore: minScore > 0 ? minScore : undefined,
         recommendations: recommendations.map((idea) => ({
           _id: idea._id,
           title: idea.title,
@@ -101,6 +132,7 @@ router.get(
           averageRating: idea.averageRating,
           matchScore: idea.matchScore,
           reasons: idea.reasons,
+          breakdown: idea.breakdown, // Transparent scoring breakdown
           createdAt: idea.createdAt,
         })),
       });

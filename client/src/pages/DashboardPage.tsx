@@ -7,6 +7,7 @@ import PDFViewerModal from '../components/PDFViewerModal';
 import UserRatingModal from '../components/UserRatingModal';
 import TrustBadges from '../components/TrustBadges';
 import ReputationDisplay from '../components/ReputationDisplay';
+import RecommendedIdeas from '../components/RecommendedIdeas';
 import { DashboardStatsSkeleton } from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 
@@ -194,6 +195,23 @@ export default function DashboardPage() {
             <div className="h-4 bg-gray-200 rounded w-48 animate-pulse"></div>
           </div>
           <DashboardStatsSkeleton />
+        </div>
+
+        {/* Recommended Ideas for You */}
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+            <div>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Recommended Ideas</h2>
+              <p className="text-sm text-gray-600">Personalized matches based on your skills, interests, and reputation.</p>
+            </div>
+            <button
+              onClick={() => window.location.assign('/ideas')}
+              className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-700"
+            >
+              Browse all ideas →
+            </button>
+          </div>
+          <RecommendedIdeas />
         </div>
       </div>
     );
