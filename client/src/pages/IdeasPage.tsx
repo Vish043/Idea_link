@@ -150,7 +150,7 @@ export default function IdeasPage() {
 
   const fetchMatchScores = async () => {
     if (!isAuthenticated || !currentUser) return;
-    
+
     try {
       setLoadingMatchScores(true);
       const response = await api.get('/matching/user/ideas');
@@ -214,7 +214,7 @@ export default function IdeasPage() {
       return;
     }
     setSelectedImages([...selectedImages, ...files]);
-    
+
     // Create previews
     files.forEach((file) => {
       const reader = new FileReader();
@@ -232,7 +232,7 @@ export default function IdeasPage() {
       return;
     }
     setSelectedVideos([...selectedVideos, ...files]);
-    
+
     // Create previews
     files.forEach((file) => {
       const reader = new FileReader();
@@ -255,7 +255,7 @@ export default function IdeasPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title || !formData.shortSummary || !formData.description) {
       showError('Please fill in all required fields');
       return;
@@ -263,7 +263,7 @@ export default function IdeasPage() {
 
     try {
       setSubmitting(true);
-      
+
       // Create FormData for file uploads
       const submitData = new FormData();
       submitData.append('title', formData.title);
@@ -271,19 +271,19 @@ export default function IdeasPage() {
       submitData.append('description', formData.description);
       submitData.append('visibility', formData.visibility);
       submitData.append('status', formData.status);
-      
+
       formData.tags.forEach((tag) => {
         submitData.append('tags', tag);
       });
-      
+
       formData.requiredSkills.forEach((skill) => {
         submitData.append('requiredSkills', skill);
       });
-      
+
       selectedImages.forEach((image) => {
         submitData.append('images', image);
       });
-      
+
       selectedVideos.forEach((video) => {
         submitData.append('videos', video);
       });
@@ -293,7 +293,7 @@ export default function IdeasPage() {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       const isEdit = editingIdeaId !== null;
       const url = isEdit ? `${apiUrl}/ideas/${editingIdeaId}` : `${apiUrl}/ideas`;
-      
+
       const response = await fetch(url, {
         method: isEdit ? 'PUT' : 'POST',
         headers: {
@@ -360,13 +360,13 @@ export default function IdeasPage() {
     try {
       const response = await api.get(`/ideas/${ideaId}`);
       const idea = response.data;
-      
+
       // Check if idea is locked
       if (idea.locked) {
         showError('This idea is locked and cannot be edited. Please unlock it first.');
         return;
       }
-      
+
       setEditingIdeaId(ideaId);
       setFormData({
         title: idea.title || '',
@@ -377,7 +377,7 @@ export default function IdeasPage() {
         visibility: idea.visibility || 'public',
         status: idea.status || 'looking_for_collaborators',
       });
-      
+
       // Set existing images/videos as previews
       if (idea.images && idea.images.length > 0) {
         setImagePreviews(idea.images.map((url: string) => getFileUrl(url)));
@@ -385,7 +385,7 @@ export default function IdeasPage() {
       if (idea.videos && idea.videos.length > 0) {
         setVideoPreviews(idea.videos.map((url: string) => getFileUrl(url)));
       }
-      
+
       setShowCreateModal(true);
       setShowDetailModal(false);
     } catch (err: any) {
@@ -451,7 +451,7 @@ export default function IdeasPage() {
 
     try {
       setSubmitting(true);
-      
+
       // Create FormData for file upload
       const formData = new FormData();
       formData.append('ideaId', selectedIdea._id);
@@ -468,7 +468,7 @@ export default function IdeasPage() {
           Authorization: `Bearer ${token}`,
         },
       });
-      
+
       showSuccess('Collaboration request sent successfully!');
       setShowCollabModal(false);
       setCollabMessage('');
@@ -564,21 +564,19 @@ export default function IdeasPage() {
                 <div className="flex border border-gray-300 rounded-md overflow-hidden flex-1 sm:flex-none">
                   <button
                     onClick={() => setFilter('all')}
-                    className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
-                      filter === 'all'
+                    className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${filter === 'all'
                         ? 'bg-indigo-600 text-white'
                         : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     All Ideas
                   </button>
                   <button
                     onClick={() => setFilter('my-ideas')}
-                    className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
-                      filter === 'my-ideas'
+                    className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${filter === 'my-ideas'
                         ? 'bg-indigo-600 text-white'
                         : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     My Ideas
                   </button>
@@ -593,11 +591,10 @@ export default function IdeasPage() {
             </button>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`px-3 sm:px-4 py-2 rounded-md transition-colors text-sm sm:text-base flex-1 sm:flex-none ${
-                showFilters || statusFilter !== 'all' || selectedTags.length > 0 || selectedSkills.length > 0
+              className={`px-3 sm:px-4 py-2 rounded-md transition-colors text-sm sm:text-base flex-1 sm:flex-none ${showFilters || statusFilter !== 'all' || selectedTags.length > 0 || selectedSkills.length > 0
                   ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+                }`}
             >
               {showFilters ? 'Hide Filters' : 'Filters'}
               {(statusFilter !== 'all' || selectedTags.length > 0 || selectedSkills.length > 0) && (
@@ -799,9 +796,9 @@ export default function IdeasPage() {
             action={
               isAuthenticated
                 ? {
-                    label: 'Create Your First Idea',
-                    onClick: () => setShowCreateModal(true),
-                  }
+                  label: 'Create Your First Idea',
+                  onClick: () => setShowCreateModal(true),
+                }
                 : undefined
             }
           />
@@ -857,192 +854,191 @@ export default function IdeasPage() {
                     }
                     // Fallback to newest if not authenticated
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                  
+
                   case 'oldest':
                     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                  
+
                   case 'rating':
                     const ratingA = a.averageRating || 0;
                     const ratingB = b.averageRating || 0;
                     if (ratingB !== ratingA) return ratingB - ratingA;
                     // If ratings are equal, sort by number of ratings
                     return (b.totalRatings || 0) - (a.totalRatings || 0);
-                  
+
                   case 'reputation':
                     const repA = a.owner.reputationScore || 0;
                     const repB = b.owner.reputationScore || 0;
                     return repB - repA;
-                  
+
                   case 'newest':
                   default:
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                 }
               })
               .map((idea) => (
-              <div
-                key={idea._id}
-                className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 border border-gray-100 relative"
-                onClick={() => handleViewIdea(idea._id)}
-              >
-                {/* Match Score Badge - Only show for authenticated users with match scores */}
-                {isAuthenticated && matchScores[idea._id] !== undefined && (
-                  <div className="absolute top-4 right-4 z-10">
-                    <div className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      matchScores[idea._id] >= 0.8
-                        ? 'bg-green-100 text-green-800 border border-green-200'
-                        : matchScores[idea._id] >= 0.6
-                        ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                        : matchScores[idea._id] >= 0.4
-                        ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                        : 'bg-gray-100 text-gray-800 border border-gray-200'
-                    }`}>
-                      {Math.round(matchScores[idea._id] * 100)}% Match
+                <div
+                  key={idea._id}
+                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 border border-gray-100 relative"
+                  onClick={() => handleViewIdea(idea._id)}
+                >
+                  {/* Match Score Badge - Only show for authenticated users with match scores */}
+                  {isAuthenticated && matchScores[idea._id] !== undefined && (
+                    <div className="absolute top-4 right-4 z-10">
+                      <div className={`px-2 py-1 rounded-full text-xs font-semibold ${matchScores[idea._id] >= 0.8
+                          ? 'bg-green-100 text-green-800 border border-green-200'
+                          : matchScores[idea._id] >= 0.6
+                            ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                            : matchScores[idea._id] >= 0.4
+                              ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                              : 'bg-gray-100 text-gray-800 border border-gray-200'
+                        }`}>
+                        {Math.round(matchScores[idea._id] * 100)}% Match
+                      </div>
                     </div>
+                  )}
+                  <div className="flex items-start justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-900 flex-1 pr-2 line-clamp-2">{idea.title}</h3>
+                    <StatusBadge status={idea.status} size="sm" />
                   </div>
-                )}
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-900 flex-1 pr-2 line-clamp-2">{idea.title}</h3>
-                  <StatusBadge status={idea.status} size="sm" />
-                </div>
-                <p className="text-gray-600 mb-3 line-clamp-3 text-sm leading-relaxed">{idea.shortSummary}</p>
+                  <p className="text-gray-600 mb-3 line-clamp-3 text-sm leading-relaxed">{idea.shortSummary}</p>
 
-                {/* Idea Ratings */}
-                <div className="flex items-center gap-2 text-sm text-gray-700 mb-3">
-                  <span className="flex items-center gap-1">
-                    <span className="text-yellow-500">⭐</span>
-                    <span className="font-semibold">
-                      {(idea.averageRating || 0).toFixed(1)}
+                  {/* Idea Ratings */}
+                  <div className="flex items-center gap-2 text-sm text-gray-700 mb-3">
+                    <span className="flex items-center gap-1">
+                      <span className="text-yellow-500">⭐</span>
+                      <span className="font-semibold">
+                        {(idea.averageRating || 0).toFixed(1)}
+                      </span>
                     </span>
-                  </span>
-                  <span className="text-gray-500">
-                    ({idea.totalRatings || 0} rating{(idea.totalRatings || 0) === 1 ? '' : 's'})
-                  </span>
-                </div>
-
-                {/* Tags */}
-                {idea.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {idea.tags.slice(0, 3).map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-1 bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 text-xs rounded-full font-medium border border-indigo-100"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                    {idea.tags.length > 3 && (
-                      <span className="px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                        +{idea.tags.length - 3} more
-                      </span>
-                    )}
+                    <span className="text-gray-500">
+                      ({idea.totalRatings || 0} rating{(idea.totalRatings || 0) === 1 ? '' : 's'})
+                    </span>
                   </div>
-                )}
 
-                {/* Required Skills - Visual Tags */}
-                {idea.requiredSkills.length > 0 && (
-                  <div className="mb-4">
-                    <div className="flex items-center gap-1 mb-2">
-                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      <span className="text-xs font-semibold text-gray-700">Required Skills:</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {idea.requiredSkills.slice(0, 4).map((skill, idx) => (
+                  {/* Tags */}
+                  {idea.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {idea.tags.slice(0, 3).map((tag, idx) => (
                         <span
                           key={idx}
-                          className="px-2.5 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-xs rounded-full font-medium border border-purple-200 flex items-center gap-1"
+                          className="px-2.5 py-1 bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 text-xs rounded-full font-medium border border-indigo-100"
                         >
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          {skill}
+                          #{tag}
                         </span>
                       ))}
-                      {idea.requiredSkills.length > 4 && (
+                      {idea.tags.length > 3 && (
                         <span className="px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                          +{idea.requiredSkills.length - 4} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-                <div className="pt-4 border-t border-gray-100">
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="h-6 w-6 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 flex items-center justify-center text-white text-xs font-semibold">
-                        {idea.owner.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium">{idea.owner.name}</span>
-                        {idea.owner.emailVerified && (
-                          <span className="text-green-600 text-xs" title="Email Verified">✓</span>
-                        )}
-                        {idea.owner.trustBadges && idea.owner.trustBadges.length > 0 && (
-                          <TrustBadges badges={idea.owner.trustBadges} size="sm" />
-                        )}
-                      </div>
-                    </div>
-                    <span className="text-gray-400">{new Date(idea.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  {(idea.owner.reputationScore !== undefined || idea.owner.completedCollaborations !== undefined) && (
-                    <div className="flex items-center gap-2 flex-wrap text-xs">
-                      {idea.owner.reputationScore !== undefined && (
-                        <ReputationDisplay
-                          reputationScore={idea.owner.reputationScore || 0}
-                          averageRating={idea.owner.averageRating || 0}
-                          totalRatings={idea.owner.totalRatings || 0}
-                          size="sm"
-                        />
-                      )}
-                      {idea.owner.completedCollaborations !== undefined && idea.owner.completedCollaborations > 0 && (
-                        <span className="text-gray-500">
-                          {idea.owner.completedCollaborations} collaboration{idea.owner.completedCollaborations !== 1 ? 's' : ''}
+                          +{idea.tags.length - 3} more
                         </span>
                       )}
                     </div>
                   )}
-                </div>
-                {idea.collaborators.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="flex items-center gap-1 text-xs text-gray-600">
-                      <span>🤝</span>
-                      <span>{idea.collaborators.length} collaborator{idea.collaborators.length !== 1 ? 's' : ''}</span>
+
+                  {/* Required Skills - Visual Tags */}
+                  {idea.requiredSkills.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex items-center gap-1 mb-2">
+                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        <span className="text-xs font-semibold text-gray-700">Required Skills:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {idea.requiredSkills.slice(0, 4).map((skill, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2.5 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-xs rounded-full font-medium border border-purple-200 flex items-center gap-1"
+                          >
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            {skill}
+                          </span>
+                        ))}
+                        {idea.requiredSkills.length > 4 && (
+                          <span className="px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                            +{idea.requiredSkills.length - 4} more
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-                {isOwner(idea) && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 flex flex-col gap-2">
-                    {idea.locked && (
-                      <div className="px-3 py-1.5 bg-yellow-100 text-yellow-800 text-xs rounded-md text-center font-semibold">
-                        🔒 Locked
+                  )}
+                  <div className="pt-4 border-t border-gray-100">
+                    <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="h-6 w-6 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 flex items-center justify-center text-white text-xs font-semibold">
+                          {idea.owner.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{idea.owner.name}</span>
+                          {idea.owner.emailVerified && (
+                            <span className="text-green-600 text-xs" title="Email Verified">✓</span>
+                          )}
+                          {idea.owner.trustBadges && idea.owner.trustBadges.length > 0 && (
+                            <TrustBadges badges={idea.owner.trustBadges} size="sm" />
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-gray-400">{new Date(idea.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    {(idea.owner.reputationScore !== undefined || idea.owner.completedCollaborations !== undefined) && (
+                      <div className="flex items-center gap-2 flex-wrap text-xs">
+                        {idea.owner.reputationScore !== undefined && (
+                          <ReputationDisplay
+                            reputationScore={idea.owner.reputationScore || 0}
+                            averageRating={idea.owner.averageRating || 0}
+                            totalRatings={idea.owner.totalRatings || 0}
+                            size="sm"
+                          />
+                        )}
+                        {idea.owner.completedCollaborations !== undefined && idea.owner.completedCollaborations > 0 && (
+                          <span className="text-gray-500">
+                            {idea.owner.completedCollaborations} collaboration{idea.owner.completedCollaborations !== 1 ? 's' : ''}
+                          </span>
+                        )}
                       </div>
                     )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditIdea(idea._id);
-                      }}
-                      disabled={idea.locked}
-                      className="w-full px-3 py-2.5 sm:py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0"
-                      title={idea.locked ? 'This idea is locked and cannot be edited' : 'Edit this idea'}
-                    >
-                      {idea.locked ? '🔒 Locked - Cannot Edit' : 'Edit Idea'}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteIdea(idea._id);
-                      }}
-                      disabled={deleting === idea._id}
-                      className="w-full px-3 py-2.5 sm:py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 min-h-[44px] sm:min-h-0"
-                    >
-                      {deleting === idea._id ? 'Deleting...' : 'Delete Idea'}
-                    </button>
                   </div>
-                )}
-              </div>
-            ))}
+                  {idea.collaborators.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <span>🤝</span>
+                        <span>{idea.collaborators.length} collaborator{idea.collaborators.length !== 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+                  )}
+                  {isOwner(idea) && (
+                    <div className="mt-3 pt-3 border-t border-gray-200 flex flex-col gap-2">
+                      {idea.locked && (
+                        <div className="px-3 py-1.5 bg-yellow-100 text-yellow-800 text-xs rounded-md text-center font-semibold">
+                          🔒 Locked
+                        </div>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditIdea(idea._id);
+                        }}
+                        disabled={idea.locked}
+                        className="w-full px-3 py-2.5 sm:py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0"
+                        title={idea.locked ? 'This idea is locked and cannot be edited' : 'Edit this idea'}
+                      >
+                        {idea.locked ? '🔒 Locked - Cannot Edit' : 'Edit Idea'}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteIdea(idea._id);
+                        }}
+                        disabled={deleting === idea._id}
+                        className="w-full px-3 py-2.5 sm:py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 min-h-[44px] sm:min-h-0"
+                      >
+                        {deleting === idea._id ? 'Deleting...' : 'Delete Idea'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
           </div>
         )}
 
@@ -1303,8 +1299,8 @@ export default function IdeasPage() {
                       disabled={submitting}
                       className="flex-1 px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {submitting 
-                        ? (editingIdeaId ? 'Updating...' : 'Creating...') 
+                      {submitting
+                        ? (editingIdeaId ? 'Updating...' : 'Creating...')
                         : (editingIdeaId ? 'Update Idea' : 'Create Idea')}
                     </button>
                     <button
@@ -1350,13 +1346,12 @@ export default function IdeasPage() {
                         <span>•</span>
                         <span>{new Date(selectedIdea.createdAt).toLocaleDateString()}</span>
                         <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            selectedIdea.status === 'looking_for_collaborators'
+                          className={`px-2 py-1 text-xs rounded-full ${selectedIdea.status === 'looking_for_collaborators'
                               ? 'bg-blue-100 text-blue-800'
                               : selectedIdea.status === 'in_progress'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}
                         >
                           {selectedIdea.status.replace('_', ' ')}
                         </span>
@@ -1378,16 +1373,16 @@ export default function IdeasPage() {
                           )}
                         </div>
                       )}
-                    {/* Idea rating summary */}
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <span className="flex items-center gap-1">
-                        <span className="text-yellow-500">⭐</span>
-                        <span className="font-semibold">{(selectedIdea.averageRating || 0).toFixed(1)}</span>
-                      </span>
-                      <span className="text-gray-500">
-                        ({selectedIdea.totalRatings || 0} rating{(selectedIdea.totalRatings || 0) === 1 ? '' : 's'})
-                      </span>
-                    </div>
+                      {/* Idea rating summary */}
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <span className="flex items-center gap-1">
+                          <span className="text-yellow-500">⭐</span>
+                          <span className="font-semibold">{(selectedIdea.averageRating || 0).toFixed(1)}</span>
+                        </span>
+                        <span className="text-gray-500">
+                          ({selectedIdea.totalRatings || 0} rating{(selectedIdea.totalRatings || 0) === 1 ? '' : 's'})
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <button
@@ -1499,8 +1494,8 @@ export default function IdeasPage() {
                           <span className="text-xs text-gray-500">
                             {(() => {
                               const userSkills = currentUser.skills || [];
-                              const matched = selectedIdea.requiredSkills.filter(rs => 
-                                userSkills.some(us => 
+                              const matched = selectedIdea.requiredSkills.filter(rs =>
+                                userSkills.some(us =>
                                   us.toLowerCase().trim() === rs.toLowerCase().trim() ||
                                   us.toLowerCase().includes(rs.toLowerCase()) ||
                                   rs.toLowerCase().includes(us.toLowerCase())
@@ -1514,21 +1509,20 @@ export default function IdeasPage() {
                       <div className="flex flex-wrap gap-2">
                         {selectedIdea.requiredSkills.map((skill, idx) => {
                           // Check if current user has this skill (for authenticated users)
-                          const userHasSkill = isAuthenticated && currentUser && 
-                            (currentUser.skills || []).some(us => 
+                          const userHasSkill = isAuthenticated && currentUser &&
+                            (currentUser.skills || []).some(us =>
                               us.toLowerCase().trim() === skill.toLowerCase().trim() ||
                               us.toLowerCase().includes(skill.toLowerCase()) ||
                               skill.toLowerCase().includes(us.toLowerCase())
                             );
-                          
+
                           return (
                             <span
                               key={idx}
-                              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 ${
-                                userHasSkill
+                              className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 ${userHasSkill
                                   ? 'bg-green-100 text-green-800 border-2 border-green-300'
                                   : 'bg-purple-100 text-purple-800 border border-purple-200'
-                              }`}
+                                }`}
                               title={userHasSkill ? 'You have this skill!' : 'Required skill'}
                             >
                               {userHasSkill && (
@@ -1550,8 +1544,8 @@ export default function IdeasPage() {
                         <p className="text-xs text-gray-500 mt-2">
                           {(() => {
                             const userSkills = currentUser.skills || [];
-                            const matched = selectedIdea.requiredSkills.filter(rs => 
-                              userSkills.some(us => 
+                            const matched = selectedIdea.requiredSkills.filter(rs =>
+                              userSkills.some(us =>
                                 us.toLowerCase().trim() === rs.toLowerCase().trim() ||
                                 us.toLowerCase().includes(rs.toLowerCase()) ||
                                 rs.toLowerCase().includes(us.toLowerCase())
@@ -1624,9 +1618,9 @@ export default function IdeasPage() {
                         <div>
                           <h3 className="text-sm font-semibold text-gray-900 mb-1">Rate this Idea</h3>
                           <p className="text-xs text-gray-600">
-                            {selectedIdea.averageRating > 0 ? (
+                            {(selectedIdea.averageRating || 0) > 0 ? (
                               <>
-                                <span className="font-semibold">{selectedIdea.averageRating.toFixed(1)}</span>
+                                <span className="font-semibold">{(selectedIdea.averageRating || 0).toFixed(1)}</span>
                                 <span className="text-yellow-500"> ⭐</span>
                                 {' '}({selectedIdea.totalRatings || 0} rating{(selectedIdea.totalRatings || 0) !== 1 ? 's' : ''})
                               </>
@@ -1639,7 +1633,7 @@ export default function IdeasPage() {
                           onClick={() => setShowRatingModal(true)}
                           className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium"
                         >
-                          {selectedIdea.averageRating > 0 ? 'Update Rating' : 'Rate Idea'}
+                          {(selectedIdea.averageRating || 0) > 0 ? 'Update Rating' : 'Rate Idea'}
                         </button>
                       </div>
                     </div>
@@ -1659,11 +1653,10 @@ export default function IdeasPage() {
                         </button>
                         <button
                           onClick={() => handleLockIdea(selectedIdea._id, !selectedIdea.locked)}
-                          className={`w-full sm:w-auto px-4 py-2 rounded-md transition-colors ${
-                            selectedIdea.locked
+                          className={`w-full sm:w-auto px-4 py-2 rounded-md transition-colors ${selectedIdea.locked
                               ? 'bg-green-600 text-white hover:bg-green-700'
                               : 'bg-yellow-600 text-white hover:bg-yellow-700'
-                          }`}
+                            }`}
                           title={selectedIdea.locked ? 'Unlock this idea to allow edits' : 'Lock this idea to prevent edits'}
                         >
                           {selectedIdea.locked ? '🔓 Unlock Idea' : '🔒 Lock Idea'}
